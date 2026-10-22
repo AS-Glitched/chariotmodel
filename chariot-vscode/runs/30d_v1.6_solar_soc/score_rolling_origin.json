@@ -1,0 +1,234 @@
+{
+  "data_source": "csv:site_1_30d_15min.csv",
+  "model_version": "from_fit",
+  "n_starts": 22,
+  "n_scored": 22,
+  "mean_mae_persistence": 73.117,
+  "mean_mae_clear_sky": 599.341,
+  "mean_mae_model_p50": 188.597,
+  "mean_coverage": 0.7893,
+  "mean_survival": 0.9333,
+  "starts": [
+    {
+      "t0": "2026-07-27 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 51.486,
+      "mae_clear_sky": 951.655,
+      "mae_model_p50": 297.211,
+      "bias_p50": 297.015,
+      "coverage_p10_p90": 0.75,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-07-28 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 72.883,
+      "mae_clear_sky": 593.932,
+      "mae_model_p50": 138.452,
+      "bias_p50": -138.452,
+      "coverage_p10_p90": 0.9688,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-07-29 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 58.471,
+      "mae_clear_sky": 848.116,
+      "mae_model_p50": 143.124,
+      "bias_p50": 141.85,
+      "coverage_p10_p90": 0.9792,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-07-30 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 75.999,
+      "mae_clear_sky": 557.41,
+      "mae_model_p50": 184.341,
+      "bias_p50": -184.341,
+      "coverage_p10_p90": 0.6979,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-07-31 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 67.731,
+      "mae_clear_sky": 668.547,
+      "mae_model_p50": 43.153,
+      "bias_p50": -36.834,
+      "coverage_p10_p90": 0.9896,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-01 00:30:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 66.208,
+      "mae_clear_sky": 678.396,
+      "mae_model_p50": 23.458,
+      "bias_p50": -0.859,
+      "coverage_p10_p90": 1.0,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-02 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 73.111,
+      "mae_clear_sky": 590.722,
+      "mae_model_p50": 115.991,
+      "bias_p50": -115.572,
+      "coverage_p10_p90": 0.9062,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-03 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 64.843,
+      "mae_clear_sky": 746.824,
+      "mae_model_p50": 60.573,
+      "bias_p50": 59.918,
+      "coverage_p10_p90": 0.9896,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-04 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 68.976,
+      "mae_clear_sky": 660.915,
+      "mae_model_p50": 47.311,
+      "bias_p50": -44.133,
+      "coverage_p10_p90": 0.9792,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-05 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 53.511,
+      "mae_clear_sky": 909.676,
+      "mae_model_p50": 209.482,
+      "bias_p50": 209.041,
+      "coverage_p10_p90": 0.6146,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-06 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 45.154,
+      "mae_clear_sky": 1075.998,
+      "mae_model_p50": 327.492,
+      "bias_p50": 327.128,
+      "coverage_p10_p90": 0.5104,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-07 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 77.071,
+      "mae_clear_sky": 532.237,
+      "mae_model_p50": 288.074,
+      "bias_p50": -288.074,
+      "coverage_p10_p90": 0.5208,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-08 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 79.086,
+      "mae_clear_sky": 502.37,
+      "mae_model_p50": 263.871,
+      "bias_p50": -263.871,
+      "coverage_p10_p90": 0.5104,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-09 00:45:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 68.131,
+      "mae_clear_sky": 673.477,
+      "mae_model_p50": 46.835,
+      "bias_p50": -42.791,
+      "coverage_p10_p90": 1.0,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-10 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 106.114,
+      "mae_clear_sky": 99.274,
+      "mae_model_p50": 628.508,
+      "bias_p50": -628.508,
+      "coverage_p10_p90": 0.5,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-11 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 69.312,
+      "mae_clear_sky": 645.144,
+      "mae_model_p50": 54.256,
+      "bias_p50": 52.939,
+      "coverage_p10_p90": 1.0,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-12 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 84.919,
+      "mae_clear_sky": 407.918,
+      "mae_model_p50": 199.877,
+      "bias_p50": -199.876,
+      "coverage_p10_p90": 0.7083,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-13 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 90.54,
+      "mae_clear_sky": 322.203,
+      "mae_model_p50": 249.908,
+      "bias_p50": -249.834,
+      "coverage_p10_p90": 0.5521,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-14 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 104.414,
+      "mae_clear_sky": 112.07,
+      "mae_model_p50": 422.478,
+      "bias_p50": -422.478,
+      "coverage_p10_p90": 0.5104,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-15 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 78.634,
+      "mae_clear_sky": 495.289,
+      "mae_model_p50": 51.116,
+      "bias_p50": 47.832,
+      "coverage_p10_p90": 0.9896,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-16 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 65.9,
+      "mae_clear_sky": 705.471,
+      "mae_model_p50": 244.35,
+      "bias_p50": 244.35,
+      "coverage_p10_p90": 0.7188,
+      "status": "OK"
+    },
+    {
+      "t0": "2026-08-17 01:00:00+00:00",
+      "survival_rate": 0.9333,
+      "mae_persistence": 86.088,
+      "mae_clear_sky": 407.868,
+      "mae_model_p50": 109.281,
+      "bias_p50": -109.281,
+      "coverage_p10_p90": 0.9688,
+      "status": "OK"
+    }
+  ],
+  "verdict": "PERSISTENCE_STRONGER_ON_AVERAGE"
+}

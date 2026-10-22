@@ -1,0 +1,98 @@
+{
+  "design": "E1b_E2_multi_horizon_weather",
+  "data_source": "csv:site_1_30d_15min.csv",
+  "origin_hour_utc": 6,
+  "n_origins": 128,
+  "modes": {
+    "no_weather": {
+      "H1_4h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 10163.5249,
+        "mean_mae_clear_sky": 16361.5592,
+        "mean_mae_model_p50": 9896.88,
+        "mean_energy_mae_clear_sky_wh": 60188.9584,
+        "mean_energy_mae_model_p50_wh": 25349.2928,
+        "mean_coverage": 0.6675,
+        "mean_sharpness_w": 26929.0048,
+        "mean_survival": 0.9333,
+        "verdict": "MODEL_BEATS_PERSISTENCE"
+      },
+      "H2_24h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 6627.514,
+        "mean_mae_clear_sky": 12578.9537,
+        "mean_mae_model_p50": 9210.5938,
+        "mean_energy_mae_clear_sky_wh": 282131.2213,
+        "mean_energy_mae_model_p50_wh": 144306.2709,
+        "mean_coverage": 0.8668,
+        "mean_sharpness_w": 31004.3502,
+        "mean_survival": 0.9188,
+        "verdict": "MODEL_BEATS_CLEAR_SKY_ENERGY"
+      },
+      "H3_72h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 6691.0184,
+        "mean_mae_clear_sky": 13323.0512,
+        "mean_mae_model_p50": 10255.9265,
+        "mean_energy_mae_clear_sky_wh": 894940.9697,
+        "mean_energy_mae_model_p50_wh": 410331.1505,
+        "mean_coverage": 0.8477,
+        "mean_sharpness_w": 31077.7649,
+        "mean_survival": 0.9145,
+        "verdict": "MODEL_BEATS_CLEAR_SKY_ENERGY"
+      }
+    },
+    "weather_forecast": {
+      "H1_4h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 10163.5249,
+        "mean_mae_clear_sky": 16361.5592,
+        "mean_mae_model_p50": 10243.0458,
+        "mean_energy_mae_clear_sky_wh": 60188.9584,
+        "mean_energy_mae_model_p50_wh": 26998.723,
+        "mean_coverage": 0.6533,
+        "mean_sharpness_w": 26608.413,
+        "mean_survival": 0.9333,
+        "verdict": "MODEL_NEAR_PERSISTENCE"
+      },
+      "H2_24h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 6627.514,
+        "mean_mae_clear_sky": 12578.9537,
+        "mean_mae_model_p50": 9567.6824,
+        "mean_energy_mae_clear_sky_wh": 282131.2213,
+        "mean_energy_mae_model_p50_wh": 151104.0273,
+        "mean_coverage": 0.8617,
+        "mean_sharpness_w": 30761.2067,
+        "mean_survival": 0.9193,
+        "verdict": "MODEL_BEATS_CLEAR_SKY_ENERGY"
+      },
+      "H3_72h": {
+        "n_scored": 128,
+        "mean_mae_persistence": 6691.0184,
+        "mean_mae_clear_sky": 13323.0512,
+        "mean_mae_model_p50": 10614.7422,
+        "mean_energy_mae_clear_sky_wh": 894940.9697,
+        "mean_energy_mae_model_p50_wh": 426898.2558,
+        "mean_coverage": 0.8389,
+        "mean_sharpness_w": 30786.7007,
+        "mean_survival": 0.9151,
+        "verdict": "MODEL_BEATS_CLEAR_SKY_ENERGY"
+      }
+    }
+  },
+  "weather_lift": {
+    "H2_24h": {
+      "no_weather_energy_mae_wh": 144306.2709,
+      "weather_energy_mae_wh": 151104.0273,
+      "improvement_wh": -6797.756,
+      "improvement_pct": -4.71
+    },
+    "H3_72h": {
+      "no_weather_energy_mae_wh": 410331.1505,
+      "weather_energy_mae_wh": 426898.2558,
+      "improvement_wh": -16567.105,
+      "improvement_pct": -4.04
+    }
+  }
+}

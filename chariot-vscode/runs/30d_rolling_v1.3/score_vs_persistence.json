@@ -1,0 +1,20 @@
+{
+  "data_source": "csv:site_1_30d_15min.csv",
+  "window_steps": 96,
+  "window_start": "2026-08-10 00:15:00+00:00",
+  "window_end": "2026-08-11 00:00:00+00:00",
+  "survival_rate": 0.9375,
+  "S_retained": 75,
+  "solar_mae": {
+    "persistence_1step": 106.114,
+    "clear_sky_naive": 99.274,
+    "hcbsswm_retained_p50": 599.157
+  },
+  "solar_rmse": {
+    "persistence_1step": 162.541,
+    "clear_sky_naive": 192.498,
+    "hcbsswm_retained_p50": 941.459
+  },
+  "p10_p90_coverage": 0.5,
+  "verdict": "PERSISTENCE_STRONGER"
+}
