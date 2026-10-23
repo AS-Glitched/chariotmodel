@@ -223,3 +223,29 @@ feedback, asserts `advisory_only: true`, asserts the absence of control endpoint
 asserts that abstention returns explicit reasons rather than a fabricated P50,
 checks that the Rejection Echo is individually addressable, and checks that a
 policy change mints a **new version** rather than editing the old one in place.
+
+---
+
+## 10. HTTP surface
+
+50 operations across 46 paths, matching the PDF §6 map:
+
+| Group | Operations |
+|---|---|
+| Sites | `GET/POST /sites`, `GET /sites/{id}/context` |
+| Admissibility | `POST /admissibility/evaluate`, `GET /admissibility/decisions`, `GET /admissibility/rule-sets` |
+| River Flow | `POST /flow/ingest`, `GET /slices/vertical`, `GET /slices/horizontal`, `GET /replay/{id}` |
+| Calibration | `GET/POST /calibration/versions`, `POST /calibration/versions/{v}/approve`, `POST /calibration/versions/{v}/retire`, `GET /calibration/resolve` |
+| Capsule | `POST /capsules/seal`, `GET /capsules/{id}` |
+| Training extract | `POST /training-extract/build`, `GET /training-extract/datasets/{version}` |
+| Model core | `POST /model/chariot/{train,infer,scenarios,promote}`, `GET /model/chariot/versions`, `POST /model/residual/{train,propose}`, `GET /model/residual/versions`, `POST /model/scenarios/generate`, `GET /model/scenarios/batches/{id}` |
+| Tribunal | `POST /tribunal/validate-batch`, `GET /tribunal/batches/{id}/retained`, `GET /tribunal/batches/{id}/rejections`, `GET /tribunal/rejections`, `GET /tribunal/rejections/{id}`, `GET/PUT /tribunal/policy` |
+| Feedback / Governor | `POST /feedback/cortex/run`, `GET /feedback/jobs`, `GET /residual/governor/status`, `POST /residual/governor/{evaluate,quarantine,set-weight}` |
+| Confidence | `POST /confidence/evaluate`, `GET /confidence/reports/{id}`, `GET/PUT /confidence/policy` |
+| Advisory | `POST /advisory/forecast`, `GET /advisory/events`, `GET /advisory/confidence` |
+| Meta | `GET /health` |
+
+`GET /health` returns the live policy snapshot and `advisory_only: true`. There is
+**no** control, dispatch or setpoint route — `test_no_control_endpoints_exist`
+asserts that no path contains `control`, `dispatch`, `setpoint`, `actuate` or
+`command`.

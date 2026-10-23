@@ -111,7 +111,7 @@ chariot-vscode/
     advisory.py       role modes, quantiles, events, abstention
     metrics.py        evaluation metrics + baseline scoreboard
     pipeline.py       the end-to-end v3 spine
-    api.py            FastAPI surface (46 operations / 44 paths, advisory-only)
+    api.py            FastAPI surface (50 operations / 46 paths, advisory-only)
   scripts/            prepare_dataset.py · run_chariot3.py · diagnose_model.py
   tests/              conftest.py · test_spine.py (16) · test_api.py (3)
   docs/ARCHITECTURE.md
