@@ -109,13 +109,128 @@ validation-fitted `spread_factor` (1.295 on the reference run).
 `one_step_prediction` and `observation_gain` are exposed for diagnostics
 (`scripts/diagnose_model.py`).
 
-### Why not the PDF's NUTS/Pathfinder/ADVI?
+### Why not the PDF's NUTS/Pathfinder/ADVI **in the ops path**?
 
-The environment has no PyMC, no Stan, no ADVI, and no GPU. The PDF's *contract* is
-preserved — hierarchical partial pooling, robust Student-t-style observation,
-physics-informed transition, multi-horizon predictive, posterior draws consumed by
-Genesis — while the *implementation* is a deterministic, CPU-only, pure-NumPy
-estimator. This is a deliberate, documented substitution, not an omission.
+The operational path must be fast, deterministic and dependency-free, so the
+clearness channel is estimated with a deterministic, CPU-only, pure-NumPy estimator
+(the PDF's *contract* — hierarchical partial pooling, robust Student-t-style
+observation, physics-informed transition, multi-horizon predictive — is preserved
+in the *implementation* of the ops model).
+
+The PDF's *sampler* is nevertheless implemented, offline, as an independent
+reference: see **§3.1 The offline PyMC reference model** below. The ops default is
+unchanged; the reference exists so that the ops model can be *checked* against a
+genuine Bayesian posterior, not so that it can be replaced by one.
+
+---
+
+## 3.1 The offline PyMC reference model (`chariot/pymc_clearness.py`)
+
+An additive, **offline** second implementation of the same clearness contract.
+It is never imported by the v3 spine, never writes an active model version and
+never changes an operational default.
+
+### The model
+
+```text
+observation   log R_i = log_profile[b(i)] + season(doy_i) + σ_proc · s_i + ε_i
+ε_i           StudentT(ν = 4, scale = obs_scale)
+state         s_i = ρ · s_{i-1} + u_i            (AR(1), reset at every night gap)
+u_i           ~ Normal(0, 1)                     (free, non-centred)
+profile       log_profile_b = fleet_mu_b + fleet_sigma · z_b,  z_b ~ Normal(0, 1)
+season        season_cos · cos θ + season_sin · sin θ          (optional)
+```
+
+Five deliberate choices, each of which was necessary to make NUTS work at all:
+
+1. **Non-centred AR(1).** The free variable is the innovation series `u`, not the
+   state. The map `u → s` is lower-triangular with unit diagonal, so the density is
+   *identical* (unit Jacobian) but the sampled variables are on a standard-normal
+   scale. With the centred form the posterior is a narrow ridge in 8 000
+   dimensions: NUTS stalled in it (r-hat 1.21, `sigma_process` collapsed to 0.0015)
+   even though the optimum was ~17 000 log units away.
+2. **The chain is reset at every night gap**, exactly as in the ops model — the
+   clearness residual does not survive the night. Without the reset the sampler
+   drove `ρ` to its 0.999 boundary and the state became a within-day random walk.
+3. **Non-centred hierarchy with the Jacobian term.** `n_bins · log(fleet_sigma)` is
+   added as a `pm.Potential`, which makes the joint density over
+   `(fleet_mu, fleet_sigma, log_profile)` identical to the centred form while
+   removing the funnel (the centred form gave r-hat 1.13 / ESS 12 on the profile
+   bins).
+4. **Single-threaded BLAS.** OpenBLAS's per-core pool made every small dot in the
+   HMC integrator cost ~16 ms; the NUTS iteration time fell from 24–98 s to
+   0.6–0.75 s once the pool was pinned to one thread (`threadpoolctl` plus the
+   `OPENBLAS/OMP/MKL/NUMEXPR_NUM_THREADS=1` environment variables, set before
+   NumPy is imported).
+5. **An identifiable observation model.** `obs_scale` has a *log-normal* prior
+   (log 0.05, sd 0.75) and the Student-t degrees of freedom are **fixed** at 4.
+   With a half-normal scale and a free `nu`, the likelihood can explain the
+   same outliers either with heavier tails or with the latent state; the
+   observation scale was then weakly identified (the two chains ended at
+   r-hat 2.7 with `obs_scale` collapsed to 0.002). `rho` is bounded below by
+   0.5 for the same reason — an unrestricted persistence lets the state
+   become flexible enough to absorb the noise.
+
+### The backends
+
+| Backend | When | Labelled as |
+|---|---|---|
+| `pymc_nuts` | default, ≥ 2 chains, `adapt_diag` init, `max_treedepth=8` | `inference_backend: pymc_nuts` |
+| `pymc_vi` | fallback when NUTS cannot be used (or `--backend vi`) | `inference_backend: pymc_vi` — **never** presented as NUTS; the manifest carries `vi_diagnostics` instead of r-hat/ESS |
+
+### The adapter (`to_channel_fit`)
+
+The posterior is projected onto the v3 `ChannelFit`:
+
+| PyMC | v3 `ChannelFit` | Note |
+|---|---|---|
+| `exp(log_profile)` | `profile` | the ops model stores a *shape*, the reference stores an absolute log ratio → `gamma = 1.0` |
+| `rho` | `rho` | identical meaning |
+| `sigma_process` | `sigma` | both are the **innovation** scale of the AR(1) |
+| `obs_scale` | `obs_scale` | both in log units |
+| `season_cos/sin` | `season_cos/sin` | the ops model applies `exp(·)` and clips to [0.6, 1.4]; the reference applies the raw additive term |
+
+The reference scenarios are then produced by `simulate_paths()` (a forward
+simulation from the **posterior draws**, not from a Gaussian summary) and pushed
+through the **same** Genesis seam, `generate_batch(..., paths=...)`, so they go
+through the same Tribunal, the same content hash and the same lineage as the
+operational scenarios.
+
+### Why there is no `POST /model/chariot/train_pymc`
+
+The reference is reachable **only** through `scripts/run_pymc_reference.py`. An
+HTTP route that trains a *different* model would be one `promote` call away from
+replacing the operational model, and the API is the surface where "an operator
+did something" has to be auditable. Keeping the reference behind a script means
+that promoting it stays an explicit, reviewable act; the reference fit is
+written to `runs/pymc_reference/` and never into the model store. This is the
+"CLI-only acceptable if safer" option in the brief.
+
+### The comparison protocol (`scripts/run_pymc_reference.py`)
+
+1. The **same** spine runs down to the training extract, so both models see
+   byte-identical rows.
+2. The ops model is fitted on the **train** split; the spread factor is
+   calibrated on **validate** (target coverage 0.78, bounded to [0.70, 1.30]).
+3. The PyMC reference is fitted on the **train** split, with the seasonal
+   harmonic selected on **validate** (kept only if it improves the validation
+   MAE by ≥ 1 %).
+4. The same spread calibration is applied to the reference ensemble.
+5. Both models are rolled forward over the same rolling-origin windows on
+   **validate** and **test**, with the residual chamber **off** for both.
+6. Every batch goes through the same Tribunal; the metrics are the same.
+7. The **test split is report-only** — nothing is fitted or selected on it.
+
+The outputs are `runs/pymc_reference/comparison.json` (machine readable) and
+`runs/pymc_reference/summary.md` (the side-by-side table).
+
+### Invariants the reference must respect
+
+* night rows and sub-threshold clear-sky rows produce **exactly zero** solar;
+* the clearness ratio is capped at `CLEARNESS_MAX = 1.25` (no uncapped ratios);
+* `clear_sky_w` is never used as `solar_w`;
+* the Tribunal is identical and is not loosened for the reference;
+* nothing is ever fitted on the test split.
 
 ---
 
@@ -218,11 +333,23 @@ survival, echo completeness, governor authority, confidence status, abstention,
 and lineage completeness.
 
 `tests/test_api.py` (6 tests) walks the whole HTTP spine — ingest → admit → slice →
-calibrate → seal → extract → train → scenarios → tribunal → confidence → advisory →
+calibrate → seal → extract → train → scenarios → confidence → advisory →
 feedback, asserts `advisory_only: true`, asserts the absence of control endpoints,
 asserts that abstention returns explicit reasons rather than a fabricated P50,
 checks that the Rejection Echo is individually addressable, and checks that a
 policy change mints a **new version** rather than editing the old one in place.
+
+`tests/test_pymc_reference.py` (13 tests) covers the **offline reference path**.
+Most of them need no PyMC at all: the operational spine must run with PyMC
+*absent* (a subprocess import check), the prepared data must mirror the ops lit
+mask, the adapter must produce a well-formed `ChannelFit`, the manifest must
+carry every required field, the reference ensemble must be night-zero, finite and
+capped, and the Genesis seam must accept the reference paths **without changing
+the operational default**. Two tests are marked `pymc` and are skipped when the
+dependency is missing: a real 1-chain tiny NUTS fit on the synthetic site, and
+the night-reset property of the AR(1) scan. Run them with::
+
+    python -m pytest tests/ -q -m pymc
 
 ---
 

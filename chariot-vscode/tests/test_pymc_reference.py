@@ -215,6 +215,30 @@ def test_reference_paths_respect_the_site_rating(
     assert paths["solar_w"].max() <= reference_ctx.rated_pv_w * 1.2 + 1e-6
 
 
+def test_reference_paths_track_the_clear_sky_ratio(
+    reference_frame: pd.DataFrame, reference_ctx: SiteContext
+) -> None:
+    """Regression: the posterior profile is a *log* ratio and must be exponentiated.
+
+    With the profile used as a ratio instead of a log ratio the reference
+    produced essentially zero solar (a -97 kW bias) while still passing the
+    "finite / night-zero / capped" checks.  The clearness the reference
+    predicts must be a plausible fraction of the clear-sky power.
+    """
+    fit = _fake_fit()
+    future = reference_frame.head(96)
+    paths = fit.simulate_paths(future, reference_ctx, n_paths=12, seed=17)
+    clear = np.nan_to_num(clear_sky_series(future), nan=0.0)
+    day = clear > 1.0
+    ratio = paths["solar_w"][:, day] / clear[None, day]
+    median = float(np.median(ratio))
+    assert 0.4 < median < 1.3, (
+        f"the reference clearness must be a plausible fraction of clear sky, got {median}"
+    )
+    # The band must not be degenerate either.
+    assert float(np.std(ratio)) > 1e-3
+
+
 def test_reference_channel_fit_adapter_shape() -> None:
     fit = _fake_fit()
     channel = fit.to_channel_fit()
@@ -373,3 +397,34 @@ def test_model_builds_and_its_log_probability_is_finite(
         point = model.initial_point()
         value = float(logp(point))
     assert np.isfinite(value)
+
+
+@pytest.mark.pymc
+def test_ar1_state_resets_at_every_gap(
+    reference_frame: pd.DataFrame, reference_ctx: SiteContext
+) -> None:
+    """The AR(1) chain must not carry information across a night gap.
+
+    The clearness residual does not survive the night, so the state after a
+    gap must depend only on the innovation after that gap.
+    """
+    if not pymc_available():  # pragma: no cover - depends on the environment
+        pytest.skip("PyMC is not installed")
+    import pytensor
+    import pytensor.tensor as pt
+
+    from chariot.pymc_clearness import _ar1_state
+
+    rho = pt.dscalar("rho")
+    innovation = pt.dvector("u")
+    reset = np.array([True, False, True, False, False], dtype=bool)
+    state = _ar1_state(rho, innovation, reset, int(reset.size))
+    fn = pytensor.function([rho, innovation], state)
+    u = np.array([0.5, 0.25, -0.75, 0.1, 0.2])
+    out = fn(0.9, u)
+    # row 0: fresh start; row 1: rho * 0.5 + 0.25; row 2: fresh start again
+    assert np.isclose(out[0], 0.5)
+    assert np.isclose(out[1], 0.9 * 0.5 + 0.25)
+    assert np.isclose(out[2], -0.75)
+    assert np.isclose(out[3], 0.9 * (-0.75) + 0.1)
+    assert np.isclose(out[4], 0.9 * (0.9 * (-0.75) + 0.1) + 0.2)

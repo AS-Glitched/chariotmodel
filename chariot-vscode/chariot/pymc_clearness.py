@@ -25,26 +25,30 @@ The model mirrors the v3 observation model in algebra:
   right-skewed and heavy-tailed, so the latent anomaly is additive in log
   space (this is exactly what the ops model does, and it is why the ops model
   uses a log-space EKF);
-* **AR(1) latent weather state** — the state runs over the *whole* 15-minute
-  grid (day and night), exactly like the ops model's Kalman filter, so the
-  time structure of the persistence is identical;
+* **AR(1) latent weather state** — the state runs over the *observed* (lit)
+  rows and is **reset at every night gap**, exactly like the ops model's
+  Kalman filter: the clearness residual does not survive the night, so the
+  chain is broken at the same places the ops model breaks it;
 * **elevation structure** — a hierarchical profile over the 15 solar-elevation
-  bins (the fleet-level hyper-mean provides the partial pooling);
+  bins (the fleet-level hyper-mean provides the partial pooling), written in
+  the non-centred form so that the funnel does not appear;
 * **optional seasonal harmonic** — selected on the *validation* split, and
   dropped when it does not help (this mirrors the ops model, which also
   rejected the harmonic on the Alice Springs 2022 data);
-* **robust observation noise** — a Student-t likelihood with a free degree of
-  freedom, the Bayesian analogue of the ops model's Huberised EKF.
+* **robust observation noise** — a Student-t likelihood with a *fixed*
+  ``nu = 4`` and a log-normal prior on the scale, the Bayesian analogue of
+  the ops model's Huberised EKF.  Both choices are deliberate: a free ``nu``
+  and a half-normal scale let the likelihood explain the outliers either
+  with heavier tails or with the latent state, and the posterior of the
+  observation scale is then weakly identified (measured: r-hat 2.7 with
+  ``obs_scale`` collapsing to 0.002).
 
-Why the AR(1) state is written as a Potential and not as ``pm.AR``
-------------------------------------------------------------------
-The latent state is an AR(1) process, so the obvious PyTensor implementation
-is a ``scan``.  A ``scan`` inside a PyMC model is fragile (it needs a
-symbolic, statically-known step count) and it also has to be *compiled*,
-which fails outright on hosts without Python development headers.
-
-``pm.AR`` looks like the answer: PyMC implements ``AR``'s log-probability
-*analytically* (see ``pymc.distributions.timeseries.ar_logp``) —
+Why the AR(1) state is sampled in its non-centred form
+----------------------------------------------------
+The latent state is an AR(1) process.  The obvious PyTensor implementation is
+a ``scan``; ``pm.AR`` looks like the answer, because PyMC implements
+``AR``'s log-probability *analytically* (see
+``pymc.distributions.timeseries.ar_logp``) —
 
 .. code-block:: python
 
@@ -59,22 +63,47 @@ chain it costs roughly **fifty times** the log-probability (measured on the
 reference host: 278 ms per gradient against 4.6 ms per log-probability).
 NUTS needs thousands of gradients, so that is not affordable.
 
-This module therefore writes the AR(1) density *directly*, as a
-:func:`pymc.Potential` over a flat state variable:
+Writing the AR(1) density directly, as a :func:`pymc.Potential` over a flat
+state variable,
 
 .. code-block:: python
 
     innov = concat([a[0], a[1:] - rho * a[:-1]])
     potential = sum(Normal(0, 1).logpdf(innov))
 
-That is the **same density** as ``pm.AR`` with unit innovations — PyMC's own
-``ar_logp`` reduces to exactly this expression — but the state is now an
-ordinary tensor, so its gradient is elementwise and no scan is compiled at
-all.  The measured cost drops to the same order as the log-probability.
+is the **same density** as ``pm.AR`` with unit innovations — PyMC's own
+``ar_logp`` reduces to exactly this expression — and it makes the gradient
+elementwise.  But the *centred* parameterisation is geometrically terrible
+for NUTS: the state is a narrow ridge in 21 000 dimensions, the sampler
+saturates its tree depth, and it never leaves the starting region (measured
+on the reference host: r-hat 1.21, ``sigma_process`` collapsed to 0.0015
+while the log-density at the true optimum is ~17 000 log units higher).
+
+This module therefore samples the **non-centred** variable — the
+standard-normal innovation series ``u`` — and builds the state with a
+``scan``:
+
+.. code-block:: python
+
+    s_i = rho * s_{i-1} + u_i          # over the observed rows
+    s_i = u_i                          # after a night gap (the chain resets)
+
+The map from ``u`` to ``s`` is lower triangular with unit diagonal, so the
+change of variables has unit Jacobian and **the density is unchanged**; the
+sampled variables are simply on a standard normal scale, which is what NUTS
+needs.  The scan is compiled by the Numba backend (no C toolchain needed)
+and costs a few milliseconds forward and ~4 ms for the reverse-mode gradient
+on the ~8 000-step observed chain.
+
+The hierarchy over the elevation bins is non-centred for the same reason
+(``log_profile_b = fleet_mu_b + fleet_sigma * z_b``); the compensating
+``n_bins * log(fleet_sigma)`` potential keeps the joint density identical to
+the centred form while removing the funnel (r-hat 1.13 / ESS 12 on the
+profile bins).
 
 Parameterisation
 ----------------
-The state is written as ``v = sigma_process * a`` where ``a`` is the
+The state is written as ``v = sigma_process * s`` where ``s`` is the
 unit-innovation AR process, so ``sigma_process`` has exactly the meaning it
 has in the ops model (the innovation scale of the state) and the two
 estimators are directly comparable.
@@ -91,8 +120,16 @@ imported:
 * ``optimizer_excluding=fusion`` — without a C backend, PyTensor's fused
   ``Composite`` op degrades to a scalar Python loop that is roughly ten
   times slower than the unfused numpy ufuncs;
-* ``mode=NUMBA`` — when ``numba`` is importable the whole graph is compiled
-  to machine code, which needs neither C headers nor fusion.
+* ``linker=numba`` + ``mode=Mode`` — when ``numba`` is importable the whole
+  graph is compiled to machine code, which needs neither C headers nor
+  fusion.  (``mode=NUMBA`` would *not* do: that is a predefined PyTensor
+  mode, and predefined modes ignore ``optimizer_excluding``.)
+
+The module also pins the BLAS thread pools to one thread.  The HMC
+integrator performs one small dot product per leapfrog step on the ~21 000
+element state vector; with OpenBLAS's per-core thread pool those calls cost
+milliseconds each (measured: 16 ms versus 0.04 ms per call), which made the
+sampler ~400x slower than the gradient itself.
 
 The operational NumPy model needs none of this.
 """
@@ -106,6 +143,16 @@ import sysconfig
 import time
 from dataclasses import dataclass, field
 from typing import Any
+
+# The BLAS thread limits have to be in the environment *before* numpy (and
+# therefore OpenBLAS) is loaded.  An operator setting always wins.
+for _blas_var in (
+    "OPENBLAS_NUM_THREADS",
+    "OMP_NUM_THREADS",
+    "MKL_NUM_THREADS",
+    "NUMEXPR_NUM_THREADS",
+):
+    os.environ.setdefault(_blas_var, "1")
 
 import numpy as np
 import pandas as pd
@@ -138,6 +185,19 @@ def _pytensor_flags() -> str:
     """Build the ``PYTENSOR_FLAGS`` value for this host.
 
     Existing flags are respected — the operator's own settings always win.
+
+    Two subtleties are handled here, both of which cost an order of magnitude
+    in sampler throughput when they are ignored:
+
+    * ``mode=NUMBA`` is a *predefined* PyTensor mode.  ``get_mode()`` returns
+      it verbatim and therefore never applies ``optimizer_excluding``.  The
+      elementwise fusion rewrite then builds ``Composite`` ops, which the
+      Numba backend cannot consume -- the whole graph falls back to the
+      Python VM and the gradient becomes ~1000x slower.  ``mode=Mode``
+      builds the mode from ``config.linker`` and *does* apply the exclusion.
+    * ``cxx=`` disables C code generation.  It is mandatory on a host without
+      Python headers (every compilation fails) and it also caps the elementwise
+      fusion at 32 operands, which keeps the graphs unfused.
     """
     existing = [p for p in os.environ.get("PYTENSOR_FLAGS", "").split(",") if p]
     keys = {p.split("=", 1)[0] for p in existing}
@@ -148,8 +208,9 @@ def _pytensor_flags() -> str:
         # not even its own lazy-linker extension -- and every compilation
         # fails.  Disable C code generation outright.
         flags.append("cxx=")
-    if _numba_available() and "mode" not in keys:
-        flags.append("mode=NUMBA")
+    if _numba_available() and "mode" not in keys and "linker" not in keys:
+        flags.append("linker=numba")
+        flags.append("mode=Mode")
     if "optimizer_excluding" not in keys and (not has_c or _numba_available()):
         # Without a C backend the fused ``Composite`` op degrades to a scalar
         # Python loop, which is roughly ten times slower than the unfused
@@ -222,6 +283,35 @@ def require_pymc() -> None:
         )
 
 
+_BLAS_LIMITS: Any = None
+
+
+def _limit_blas_threads() -> int | None:
+    """Pin the BLAS thread pools to one thread for this process.
+
+    The HMC integrator evaluates one small dot product per leapfrog step on
+    the latent state vector.  With OpenBLAS's per-core thread pool those
+    calls are dominated by the thread hand-off (measured on this host:
+    16 ms versus 0.04 ms per call), which makes the sampler orders of
+    magnitude slower than the gradient it is supposed to be evaluating.
+
+    ``threadpoolctl`` is used when it is importable; otherwise the setting
+    only takes effect through the environment variables set at import time.
+    """
+    global _BLAS_LIMITS
+    if _BLAS_LIMITS is not None:
+        return 1
+    try:  # pragma: no cover - depends on the environment
+        import threadpoolctl
+
+        _BLAS_LIMITS = threadpoolctl.threadpool_limits(limits=1)
+        _BLAS_LIMITS.__enter__()
+        return 1
+    except Exception:  # pragma: no cover - optional dependency
+        _BLAS_LIMITS = False
+        return None
+
+
 def _configure_pytensor() -> dict[str, Any]:
     """Apply the PyTensor settings this host needs (idempotent).
 
@@ -232,10 +322,12 @@ def _configure_pytensor() -> dict[str, Any]:
 
     * ``cxx = ""`` — always possible, and mandatory on a host without
       Python headers (otherwise every compilation fails);
-    * ``mode = "NUMBA"`` — only useful when the elementwise fusion rewrite
-      is excluded as well, because the Numba backend cannot consume fused
-      graphs.  ``FAST_COMPILE`` is the fallback: it never fuses, so the
-      unfused numpy ufuncs are used.
+    * the Numba linker — only useful when the elementwise fusion rewrite is
+      excluded as well, because the Numba backend cannot consume fused
+      graphs.  ``FAST_COMPILE``/``vm`` is the fallback: it never fuses, so
+      the unfused numpy ufuncs are used;
+    * a single BLAS thread — applied at runtime as well, because the
+      environment variables only take effect when OpenBLAS is loaded.
     """
     info: dict[str, Any] = {
         "pytensor_flags": PYTENSOR_FLAGS,
@@ -245,6 +337,7 @@ def _configure_pytensor() -> dict[str, Any]:
     if pytensor is None:  # pragma: no cover - PyMC is missing
         info["backend"] = "unavailable"
         return info
+    info["blas_threads"] = _limit_blas_threads()
     if not info["c_toolchain_available"]:
         try:
             pytensor.config.cxx = ""
@@ -252,17 +345,24 @@ def _configure_pytensor() -> dict[str, Any]:
             pass
     excluding = str(getattr(pytensor.config, "optimizer_excluding", "") or "")
     fusion_off = "fusion" in excluding
-    if info["numba_available"] and fusion_off:
-        try:
-            pytensor.config.mode = "NUMBA"
-        except Exception:  # pragma: no cover - defensive
-            pass
-    elif info["numba_available"] and not fusion_off:
-        try:
-            pytensor.config.mode = "FAST_COMPILE"
-        except Exception:  # pragma: no cover - defensive
-            pass
-    info["backend"] = str(getattr(pytensor.config, "mode", "default"))
+    backend = str(getattr(pytensor.config, "mode", "default"))
+    try:  # pragma: no cover - depends on the environment
+        from pytensor.compile.mode import Mode, get_mode
+
+        mode = get_mode(None)
+        if not fusion_off:
+            # Rebuild the mode with the fusion rewrite excluded.  The
+            # predefined ``NUMBA`` mode ignores ``optimizer_excluding``, so
+            # the exclusion has to be attached to the Mode object itself.
+            mode = mode.excluding("fusion")
+            fusion_off = True
+        if info["numba_available"] and type(mode.linker).__name__ != "NumbaLinker":
+            mode = Mode(linker="numba", optimizer=mode.provided_optimizer)
+        pytensor.config.mode = mode
+        backend = type(mode.linker).__name__
+    except Exception:  # pragma: no cover - defensive
+        pass
+    info["backend"] = backend
     info["fusion_excluded"] = fusion_off
     info["cxx"] = str(getattr(pytensor.config, "cxx", ""))
     return info
@@ -291,9 +391,9 @@ class PymcReferenceConfig:
     """Inference settings for the offline reference fit."""
 
     #: Posterior draws per chain.
-    draws: int = 500
+    draws: int = 250
     #: NUTS tuning steps per chain.
-    tune: int = 500
+    tune: int = 250
     #: Number of chains (>= 2 is required for a meaningful R-hat).
     chains: int = 2
     #: Parallel chains.  The reference host has 2 cores and 3 GB of RAM, so
@@ -301,8 +401,15 @@ class PymcReferenceConfig:
     cores: int = 1
     #: NUTS target acceptance rate.
     target_accept: float = 0.9
-    #: NUTS maximum tree depth.
-    max_treedepth: int = 10
+    #: NUTS maximum tree depth.  Each leapfrog step evaluates the gradient
+    #: of the latent state (one element per observed row), so the tree depth
+    #: is the knob that bounds the cost of one iteration.
+    max_treedepth: int = 8
+    #: NUTS initialisation.  ``adapt_diag`` starts from the method-of-moments
+    #: point of this module (no jitter): the latent state is one AR(1) chain
+    #: over the observed rows, and jittering every component independently
+    #: would start the chain far away from the typical set.
+    init: str = "adapt_diag"
     #: ``auto`` (fit with the harmonic, keep it only if validation improves),
     #: ``on`` or ``off``.
     season: str = "auto"
@@ -348,9 +455,10 @@ class PymcReferenceConfig:
 class ClearnessData:
     """The full-grid clearness view of a telemetry frame.
 
-    The latent AR(1) state runs over the *whole* grid (night included), the
-    way the ops model's Kalman filter does, so the data object keeps every
-    row and carries an observation mask instead of dropping the night.
+    The object keeps **every** row of the 15-minute grid and carries an
+    observation mask instead of dropping the night: the elevation profile and
+    the seasonal harmonic are indexed by the grid, while the AR(1) state is
+    defined on the observed (lit) rows and is reset at every gap.
     """
 
     timestamps: pd.Series
@@ -435,6 +543,60 @@ def prepare_clearness_data(frame: pd.DataFrame, ctx: Any) -> ClearnessData:
 # --------------------------------------------------------------------------
 
 
+def _ar1_state(rho: Any, innovation: Any, reset: np.ndarray, n_steps: int) -> Any:
+    """The AR(1) state over the **observed** rows.
+
+    ``s_i = rho * s_{i-1} + u_i`` while the observations are consecutive on
+    the 15-minute grid, and ``s_i = u_i`` after a gap (night), which is the
+    convention the ops model uses as well: the clearness residual does not
+    persist across the night.
+
+    The recursion is written as a PyTensor scan so that the *non-centred*
+    parameterisation can be used: the sampled variable is the
+    standard-normal innovation series, and the state is a deterministic
+    function of it.  The map from ``u`` to ``s`` is lower triangular with
+    unit diagonal, so the density is unchanged.
+    """
+    import pytensor
+
+    reset_flags = np.asarray(reset, dtype=bool)
+
+    def _step(u_t, reset_t, s_prev, rho_t):
+        return pytensor.tensor.switch(reset_t, u_t, rho_t * s_prev + u_t)
+
+    # NOTE: ``n_steps`` is deliberately *not* passed to ``pytensor.scan``.
+    # With statically shaped sequences PyTensor then derives the length
+    # itself; passing an explicit count makes it slice the sequences with a
+    # symbolic index, which fails on statically shaped vectors.  The
+    # ``reshape`` drops the static length of the first sequence, which is
+    # what lets PyTensor slice it with that symbolic index.
+    innov = pytensor.tensor.as_tensor(innovation).reshape((-1,))
+    flags = pytensor.tensor.as_tensor_variable(reset_flags)
+    seq = pytensor.scan(
+        fn=_step,
+        sequences=[innov, flags],
+        outputs_info=[pytensor.tensor.zeros((), dtype="float64")],
+        non_sequences=[rho],
+        strict=True,
+        name="ar1_state",
+        return_updates=False,
+    )
+    return pytensor.tensor.specify_shape(seq, (int(n_steps),))
+
+
+def _state_to_innovation(state: np.ndarray, rho: float, reset: np.ndarray) -> np.ndarray:
+    """The inverse of the AR(1) recursion: ``u_i = s_i - rho * s_{i-1}``."""
+    arr = np.asarray(state, dtype=float)
+    flags = np.asarray(reset, dtype=bool)
+    innov = np.empty_like(arr)
+    if arr.size:
+        innov[0] = arr[0]
+    if arr.size > 1:
+        prev = np.where(flags[1:], 0.0, rho * arr[:-1])
+        innov[1:] = arr[1:] - prev
+    return innov
+
+
 def _initial_state_estimate(data: ClearnessData) -> dict[str, Any]:
     """A method-of-moments starting point for the NUTS chain.
 
@@ -512,11 +674,13 @@ def build_pymc_model(
     ==========================  ===============================================
     ``fleet_log_prof_mu``        N(0, 0.5) — the mean log-clearness level
     ``fleet_log_prof_sigma``     HalfNormal(0.25) — between-bin spread
-    ``log_profile``              N(fleet_mu, fleet_sigma) per elevation bin
-    ``rho``                      U(0, 0.999) — AR(1) persistence per 15 min
+    ``profile_z``                N(0, 1) — the non-centred bin offsets
+    ``log_profile``              deterministic: fleet_mu + fleet_sigma * z
+    ``rho``                      U(0.5, 0.999) — AR(1) persistence per 15 min
     ``sigma_process``            HalfNormal(0.3) — AR(1) innovation scale
-    ``obs_scale``                HalfNormal(0.15) — observation scale (log units)
-    ``nu_excess``                Exponential(0.2), so nu = 2 + excess >= 2
+    ``weather_innovation``       N(0, 1) — the non-centred AR(1) innovations
+    ``obs_scale``                LogNormal(log 0.05, 0.75) — observation scale
+    ``nu``                       fixed at 4 (Student-t degrees of freedom)
     ``season_cos`` / ``season_sin``  N(0, 0.1) — bounded annual harmonic
     ==========================  ===============================================
     """
@@ -524,43 +688,89 @@ def build_pymc_model(
     n = data.n
     n_bins = data.n_bins
     obs_index = np.asarray(data.obs_index, dtype=np.int64)
-    theta = 2.0 * math.pi * data.doy / 365.25
+    obs_bins = np.asarray(data.bins[obs_index], dtype=np.int64)
+    theta_obs = 2.0 * math.pi * data.doy[obs_index] / 365.25
+    n_obs = int(obs_index.size)
+    # A night (or any gap) breaks the AR(1) chain, exactly like the ops
+    # model: the clearness residual does not persist across the night.
+    reset = np.ones(n_obs, dtype=bool)
+    if n_obs > 1:
+        reset[1:] = np.diff(obs_index) != 1
     start = _initial_state_estimate(data)
 
     with pm.Model() as model:
         # -- hierarchical elevation structure (partial pooling over bins) ---
+        # The hierarchy is written in the *non-centred* form
+        # ``log_profile_b = fleet_mu_b + fleet_sigma * z_b`` with ``z ~ N(0,1)``.
+        # The change of variables has Jacobian ``fleet_sigma ** n_bins``, and
+        # the compensating ``n_bins * log(fleet_sigma)`` term is added below so
+        # that the joint density over
+        # ``(fleet_mu, fleet_sigma, log_profile)`` is *identical* to the
+        # centred parameterisation.  Without the compensation the funnel
+        # pathology of the centred form (r-hat 1.13, ESS 12 on the profile
+        # bins) reappears in a different guise.
         fleet_mu = pm.Normal("fleet_log_prof_mu", 0.0, 0.5, shape=n_bins)
         fleet_sigma = pm.HalfNormal("fleet_log_prof_sigma", 0.25)
-        log_profile = pm.Normal("log_profile", fleet_mu, fleet_sigma, shape=n_bins)
-
-        # -- AR(1) latent weather state --------------------------------------
-        # The state is a flat tensor; the AR(1) density is written out as a
-        # Potential (see the module docstring).  This is the same density as
-        # ``pm.AR`` with unit innovations, but its gradient is elementwise and
-        # no scan is ever compiled.
-        rho = pm.Uniform("rho", 0.0, 0.999)
-        sigma_process = pm.HalfNormal("sigma_process", 0.3)
-        state = pm.Flat("weather_state", shape=n)
-        innov = pt.concatenate([state[:1], state[1:] - rho * state[:-1]])
-        pm.Potential(
-            "ar1_state",
-            -0.5 * pt.sum(pt.square(innov)) - 0.5 * n * math.log(2.0 * math.pi),
+        profile_z = pm.Normal("profile_z", 0.0, 1.0, shape=n_bins)
+        log_profile = pm.Deterministic(
+            "log_profile", fleet_mu + fleet_sigma * profile_z
         )
-        v = sigma_process * state
+        pm.Potential("profile_jacobian", n_bins * pt.log(fleet_sigma))
+
+        # -- AR(1) latent weather state (non-centred) ------------------------
+        # The free variable is the *innovation* series ``u`` (standard
+        # normal) on the observed rows; the AR(1) state is the recursion
+        # ``s_i = rho * s_{i-1} + u_i``, restarted after a gap.  The map from
+        # ``u`` to ``s`` is lower triangular with unit diagonal, so the change
+        # of variables has unit Jacobian: this is *exactly* the same density
+        # as the centred parameterisation, but the sampled variables are on a
+        # standard normal scale.  That matters a great deal here — with the
+        # centred parameterisation the posterior is a narrow ridge in 21 000
+        # dimensions, NUTS cannot climb it (r-hat 1.21, sigma_process
+        # collapsed to ~0), and the sampler saturates the tree depth.
+        # The persistence is bounded away from zero: the clearness anomaly
+        # is strongly autocorrelated (the ops model estimates rho ~ 0.95 on
+        # this site), and letting rho collapse towards zero would make the
+        # latent state flexible enough to absorb the observation noise.
+        rho = pm.Uniform("rho", 0.5, 0.999)
+        sigma_process = pm.HalfNormal("sigma_process", 0.3)
+        innovation = pm.Normal("weather_innovation", 0.0, 1.0, shape=n_obs)
+        state = _ar1_state(rho, innovation, reset, n_obs)
 
         # -- optional bounded annual harmonic ---------------------------------
         if season:
             season_cos = pm.Normal("season_cos", 0.0, 0.1)
             season_sin = pm.Normal("season_sin", 0.0, 0.1)
-            season_term = season_cos * np.cos(theta) + season_sin * np.sin(theta)
+            season_term = season_cos * np.cos(theta_obs) + season_sin * np.sin(theta_obs)
         else:
-            season_term = pt.zeros(n)
+            season_term = pt.zeros(len(obs_index))
 
         # -- observation ------------------------------------------------------
-        mu = log_profile[data.bins] + season_term + v
-        mu_obs = pt.take(mu, obs_index)
-        obs_scale = pm.HalfNormal("obs_scale", 0.15)
-        nu = pm.Exponential("nu_excess", 0.2) + 2.0
+        # The mean is evaluated on the **observed rows only**.  Evaluating it
+        # on the whole grid would make the gradient of the elevation profile
+        # a scatter of tens of thousands of indices into 15 bins; on the
+        # observed rows the scatter is an order of magnitude smaller, which
+        # is what keeps the gradient affordable.
+        mu_obs = (
+            log_profile[obs_bins]
+            + season_term
+            + sigma_process * state
+        )
+        # The observation scale is the *bulk* (robust) scale of the clearness
+        # residual.  It gets a log-normal prior rather than a half-normal:
+        # the half-normal is flat at zero, so the likelihood can drive
+        # ``obs_scale`` to ~0 by letting the latent state absorb the noise,
+        # and the posterior becomes weakly identified (the two chains ended
+        # up at r-hat 2.7 with ``obs_scale`` at 0.002).  The log-normal
+        # excludes that degenerate corner without being sharp: the log-scale
+        # is centred on 0.05 with a 0.75 standard deviation, i.e. the bulk
+        # scale of a clearness residual.
+        obs_scale = pm.LogNormal("obs_scale", math.log(0.05), 0.75)
+        # The degrees of freedom are **fixed** at 4 for the same reason: a
+        # free ``nu`` trades off against the latent state (heavy tails can
+        # explain what the state would otherwise explain) and leaves the
+        # observation scale unidentified.
+        nu = 4.0
         pm.StudentT(
             "log_clearness",
             nu=nu,
@@ -574,10 +784,21 @@ def build_pymc_model(
             model.set_initval(model["rho"], float(start["rho"]))
             model.set_initval(model["sigma_process"], float(start["sigma_process"]))
             model.set_initval(model["obs_scale"], float(start["obs_scale"]))
-            model.set_initval(model["log_profile"], start["log_profile"])
-            model.set_initval(model["fleet_log_prof_mu"], start["fleet_log_prof_mu"])
-            model.set_initval(model["fleet_log_prof_sigma"], start["fleet_log_prof_sigma"])
-            model.set_initval(model["weather_state"], start["state"])
+            # ``log_profile`` is a deterministic of the non-centred hierarchy,
+            # so the *free* variables are initialised instead: the per-bin
+            # fleet mean carries the method-of-moments profile and the
+            # standardised offsets start at zero.
+            model.set_initval(model["fleet_log_prof_mu"], start["log_profile"])
+            model.set_initval(
+                model["fleet_log_prof_sigma"], float(start["fleet_log_prof_sigma"])
+            )
+            model.set_initval(model["profile_z"], np.zeros(n_bins))
+            model.set_initval(
+                model["weather_innovation"],
+                _state_to_innovation(
+                    start["state"][obs_index], float(start["rho"]), reset
+                ),
+            )
             if season:
                 model.set_initval(model["season_cos"], 0.0)
                 model.set_initval(model["season_sin"], 0.0)
@@ -738,10 +959,10 @@ class PymcClearnessFit:
 
         log_profile = self.log_profile[picks]                # (n_paths, n_bins)
         centres = 0.5 * (np.asarray(self.profile_edges[:-1]) + np.asarray(self.profile_edges[1:]))
-        profile = np.stack(
+        log_profile_at_elev = np.stack(
             [np.interp(elevation, centres, log_profile[i]) for i in range(n_paths)],
             axis=0,
-        )                                                       # (n_paths, T)
+        )                                                       # (n_paths, T), log space
         rho = np.clip(self.posterior["rho"][picks], 0.0, 0.995)
         sigma = np.clip(
             self.posterior["sigma_process"][picks] * float(spread_factor), 1e-4, 2.0
@@ -772,22 +993,35 @@ class PymcClearnessFit:
             v[:, k] = np.where(daylight[k], nxt, 0.0)
 
         # -- clearness and power --------------------------------------------
+        # The reference model lives in *log* space:
+        #     log(u) = log_profile(elev) + season(doy) + v
+        # with ``u`` the clearness ratio, exactly as in the PyMC likelihood.
         if use_season:
             season = season_cos[:, None] * np.cos(theta)[None, :] + season_sin[:, None] * np.sin(
                 theta
             )[None, :]
         else:
             season = np.zeros((n_paths, t_steps), dtype=float)
-        base = profile * np.exp(np.clip(season, -0.51, 0.34))
-        clearness = np.clip(np.exp(np.clip(v, -6.0, 3.0)), 0.0, CLEARNESS_MAX)
-        u = np.clip(base * clearness, 0.0, CLEARNESS_MAX)
-        power = (clear[None, :] + OBS_FLOOR_W) * u - OBS_FLOOR_W
+        log_u = log_profile_at_elev + season + v
+        u = np.clip(np.exp(np.clip(log_u, -6.0, 3.0)), 0.0, CLEARNESS_MAX)
+        # The ops simulator writes ``solar = gain * clear_sky * u``; the
+        # reference uses the same convention so that the *clearness ratio*
+        # the Tribunal sees is exactly ``u`` and therefore always respects
+        # ``CLEARNESS_MAX`` (an observation floor inside the product would
+        # inflate the ratio at low light).
+        power = clear[None, :] * u
         # Robust observation noise in log space (the reference likelihood).
         nu = 5.0
         noise = obs_scale[:, None] * rng.standard_t(nu, size=(n_paths, t_steps)) / math.sqrt(
             nu / 2.0
         )
         power = power * np.exp(np.clip(noise, -1.5, 1.5))
+        # The clearness ceiling is re-applied *after* the observation noise:
+        # the noise is multiplicative, so without this the realised ratio
+        # could exceed ``CLEARNESS_MAX``.
+        clear_row = clear[None, :]
+        ratio = np.where(clear_row > 1.0, power / np.maximum(clear_row, 1.0), 0.0)
+        power = np.where(clear_row > 1.0, np.minimum(ratio, CLEARNESS_MAX) * clear_row, 0.0)
         # Night (and sub-threshold clear sky) rows are exactly zero.
         power[:, ~daylight] = 0.0
         power = np.maximum(power, 0.0)
@@ -850,7 +1084,11 @@ def _seasonal_validation_mae(
     """One-step-ahead MAE (W) of the clearness model on a held-out frame.
 
     Mirrors the ops model's selection rule: the seasonal harmonic is kept
-    only when it lowers the validation error.
+    only when it lowers the validation error.  The diagnostic uses the ops
+    model's *observation-floor* convention for the gain (the selection
+    metric only has to be internally consistent, and the ops model is the
+    reference for it); the reference simulator itself mirrors the ops
+    ``simulate`` convention, ``solar = clear_sky * u``.
     """
     ordered = data_like.sort_values("timestamp_utc").reset_index(drop=True)
     solar = solar_series(ordered)
@@ -1009,6 +1247,7 @@ def fit_pymc_clearness(
         "config": config.to_dict(),
     }
     idata = None
+    vi_info: dict[str, Any] = {}
     started = time.time()
 
     def _run_nuts() -> Any:
@@ -1021,6 +1260,7 @@ def fit_pymc_clearness(
                 cores=config.cores,
                 target_accept=config.target_accept,
                 max_treedepth=config.max_treedepth,
+                init=config.init,
                 random_seed=config.random_seed,
                 progressbar=config.progressbar,
                 compute_convergence_checks=False,
@@ -1036,6 +1276,13 @@ def fit_pymc_clearness(
                 random_seed=config.random_seed,
                 progressbar=config.progressbar,
             )
+            try:
+                history = [float(v) for v in approx.history]
+                if history:
+                    vi_info["elbo_loss_initial"] = history[0]
+                    vi_info["elbo_loss_final"] = history[-1]
+            except Exception:  # pragma: no cover - diagnostics only
+                pass
             samples = approx.sample(config.vi_samples, random_seed=config.random_seed)
         return pm.to_inference_data(samples)
 
@@ -1063,6 +1310,7 @@ def fit_pymc_clearness(
     diagnostics["convergence"] = _convergence_summary(idata)
     if backend == "pymc_vi":
         diagnostics["vi_iterations"] = int(config.vi_iters)
+        diagnostics["vi_diagnostics"] = vi_info
         diagnostics["vi_note"] = (
             "VI reference — the posterior is a Gaussian approximation, not a "
             "NUTS sample.  Do not quote it as a NUTS result."
@@ -1082,12 +1330,20 @@ def fit_pymc_clearness(
     if validation is not None and len(validation) and season:
         mae_with = _seasonal_validation_mae(posterior_mean, validation, ctx, use_season=True)
         mae_without = _seasonal_validation_mae(posterior_mean, validation, ctx, use_season=False)
-        if mae_without < mae_with:
+        # The harmonic is kept only when it buys a *meaningful* improvement
+        # on the validation split (1 % relative).  A hair-thin difference is
+        # noise, and the ops model uses the same "keep it only if it helps"
+        # rule.
+        gain = (mae_without - mae_with) / max(mae_without, 1e-9)
+        if gain < 0.01:
             seasonal_selected = "none"
         season_selection.update(
             {
                 "validation_mae_with_season": round(mae_with, 3),
                 "validation_mae_without_season": round(mae_without, 3),
+                "validation_relative_gain": round(float(gain), 6),
+                "selection_rule": "keep the harmonic only if it improves the "
+                "validation MAE by at least 1 %",
                 "selected": seasonal_selected,
             }
         )
@@ -1131,7 +1387,7 @@ def fit_pymc_clearness(
         # The per-step latent state is large and is not needed downstream.
         try:
             idata.posterior = idata.posterior.drop_vars(
-                [v for v in ("weather_state",) if v in idata.posterior]
+                [v for v in ("weather_innovation",) if v in idata.posterior]
             )
         except Exception:  # pragma: no cover - defensive
             pass

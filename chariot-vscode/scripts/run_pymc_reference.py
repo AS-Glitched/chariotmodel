@@ -488,8 +488,17 @@ def run_comparison(args: argparse.Namespace) -> dict[str, Any]:
                     survival_rate=tribunal.survival_rate,
                     policy=CONFIDENCE_POLICY,
                 )
+                # The training extract carries the clear-sky power under the
+                # canonical name ``clear_sky_power_w``; the baseline
+                # scoreboard expects ``clear_sky_w`` so that the clear-sky
+                # naive baseline is on the table next to the persistence one.
+                actual_for_baselines = actual
+                if "clear_sky_w" not in actual.columns and "clear_sky_power_w" in actual.columns:
+                    actual_for_baselines = actual.rename(
+                        columns={"clear_sky_power_w": "clear_sky_w"}
+                    )
                 baselines = baseline_scoreboard(
-                    actual,
+                    actual_for_baselines,
                     last_solar=state["last_solar"],
                     last_load=state["last_load"],
                     last_soc=state["soc_percent"],

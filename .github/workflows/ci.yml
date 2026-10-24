@@ -50,3 +50,16 @@ jobs:
               importlib.import_module(f'chariot.{name}')
           print('all 21 chariot modules import cleanly')
           "
+
+      - name: Optional PyMC reference module must import without PyMC
+        working-directory: chariot-vscode
+        run: |
+          python -c "
+          from chariot.pymc_clearness import pymc_available
+          assert isinstance(pymc_available(), bool)
+          print('the offline reference module imports cleanly (PyMC present:', pymc_available(), ')')
+          "
+
+      # The PyMC reference tests need the optional extra and are therefore
+      # not part of the default matrix.  Run them with:
+      #   pip install -r requirements-pymc.txt && python -m pytest tests -q -m pymc

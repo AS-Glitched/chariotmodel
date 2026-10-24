@@ -1,0 +1,16 @@
+# Optional extra: the OFFLINE PyMC reference model.
+#
+# The operational spine does NOT need any of this — `chariot/model.py` is
+# pure NumPy and nothing in the v3 spine imports PyMC.  Install this file
+# only if you want to run the offline reference and its comparison:
+#
+#     pip install -r requirements-pymc.txt
+#     python scripts/run_pymc_reference.py --draws 250 --tune 250 --chains 2
+#
+# The reference tests are marked `pymc` and skip themselves when PyMC is
+# absent:  python -m pytest tests/ -q -m "not pymc"
+pymc>=5.10
+arviz>=0.17
+pytensor>=2.20
+numba>=0.59
+threadpoolctl>=3.1
