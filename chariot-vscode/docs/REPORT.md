@@ -494,24 +494,45 @@ Read-out against the promotion gates of requirement 10:
 
 `rhat_max = 2.43`, `ess_min = 2.50`, `divergences = 0`. The *predictions* are good
 (§7.2) and the posterior means are **reproducible across independent runs**
-(ρ 0.9273/0.9278, σ_proc 0.2037/0.2037), which says the sampler is finding the same
-region every time — but the chains are not *exploring* it: 500 draws yield ~2.5
-effective samples.
+(ρ 0.9273/0.9278, σ_proc 0.2037/0.2037), and an instrumented 2-chain run shows the
+two chains sitting on **the same** elevation profile to four decimals — so the
+sampler is finding the right region every time. What it is not doing is *moving*.
 
-Diagnosis: the latent state has one innovation per observed row and is flexible
-enough to absorb the observation noise, so the likelihood drives `obs_scale` to
-0.0017. That makes the posterior extremely sharp, the step size collapses, the
-trees saturate at `max_treedepth = 8`, and the chains crawl. Mitigations already
-in the code: the non-centred AR(1), the non-centred hierarchy with its Jacobian,
-the night reset, `ρ ≥ 0.5`, a log-normal `obs_scale` prior, a fixed `ν = 4`,
-`adapt_diag` initialisation from the method-of-moments point, and a single-threaded
-BLAS.
+The posterior sds from the published run explain why:
 
-Not yet tried (and the honest next steps): `init = "advi+adapt_diag"` (a mean-field
-ADVI warm start and mass matrix), a much longer tuning run (≥ 1 000 steps) so the
-diagonal mass matrix is estimated from enough samples, a mean-field VI fallback
-(the VI backend is implemented and labelled `pymc_vi`), and a hierarchical
-`rho`/`sigma_process` prior that ties the state to the *marginal* anomaly scale.
+| parameter | posterior mean | posterior sd | relative sd |
+|---|---|---|---|
+| `rho` | 0.927795 | 0.000446 | 4.8 × 10⁻⁴ |
+| `sigma_process` | 0.203702 | 6.0 × 10⁻⁵ | 3.0 × 10⁻⁴ |
+| `obs_scale` | 0.0016992 | 1.2 × 10⁻⁴ | 7.3 × 10⁻² |
+
+The posterior is a **needle**. The cause is the opposite of what it looks like:
+the model is *over*-identified, not weakly identified. The latent state carries
+one innovation per observed row (`n_obs_rows = 8 108` on 9 975 grid rows) and the
+Student-t observation noise is driven down to 0.0017, so the state plus the
+15-bin profile can reproduce the observations almost exactly. The posterior is then
+a near-zero-measure manifold, the adapted diagonal mass matrix is fine but the
+trajectory has to crawl along it, and 500 iterations yield ~2.5 effective samples.
+
+Mitigations already in the code: the non-centred AR(1), the non-centred hierarchy
+with its Jacobian, the night reset, `ρ ≥ 0.5`, a log-normal `obs_scale` prior, a
+fixed `ν = 4`, `adapt_diag` initialisation from the method-of-moments point, and a
+single-threaded BLAS.
+
+Not yet tried — the honest next steps, in the order I would take them:
+
+1. **A coarser latent state.** Put the AR(1) on an hourly (or 30-minute) grid and
+   interpolate to the 15-minute observations. That drops the state from ~8 100 to
+   ~2 000 dimensions, which is the dimension that makes the posterior a needle.
+2. **`init = "advi+adapt_diag"`** (mean-field ADVI warm start *and* a diagonal mass
+   matrix) instead of the identity mass matrix the `adapt_diag` path starts from.
+3. **A much longer tuning run** (≥ 1 000 steps) so the diagonal mass matrix is
+   estimated from enough samples, and more draws.
+4. **The VI fallback** (already implemented and labelled `pymc_vi`) as a labelled
+   reference where NUTS cannot certify its own uncertainty.
+
+Until at least one of these lands, the reference's *skill* numbers are reportable
+and its *uncertainty* is not certified — which is exactly why it is not promoted.
 
 ---
 
