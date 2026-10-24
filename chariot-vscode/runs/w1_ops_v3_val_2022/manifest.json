@@ -1,0 +1,374 @@
+{
+  "system_version": "3.0.0",
+  "created_at_utc": "2026-10-24T17:57:32.834020Z",
+  "data_source": {
+    "path": "var/data/dka_alice_springs_2022_2023.parquet",
+    "window": [
+      "2022-01-01",
+      "2024-01-01"
+    ],
+    "rows_raw": 70003,
+    "rows_admitted": 68090
+  },
+  "admissibility": {
+    "rule_set_version": "admissibility_v3.0",
+    "n_evaluated": 70003,
+    "decision_counts": {
+      "ADMISSIBLE_WITH_WARNINGS": 32857,
+      "ADMISSIBLE": 35233,
+      "INSUFFICIENT_DATA": 1913
+    },
+    "hard_failure_counts": {
+      "MANDATORY_FIELDS": 1913
+    },
+    "soft_warning_counts": {
+      "NIGHT_SOLAR": 32857
+    }
+  },
+  "river_flow": {
+    "slice_ids": [
+      "slice_vertical_383b141eab209faa",
+      "slice_horizontal_2169207be70d26cf",
+      "slice_horizontal_5e30a82e3005eb3e"
+    ],
+    "content_hashes": [
+      "b29d28569cddff8174684006b046cf80115bcff1c10fac162203c9a951af4587",
+      "b29d28569cddff8174684006b046cf80115bcff1c10fac162203c9a951af4587",
+      "b29d28569cddff8174684006b046cf80115bcff1c10fac162203c9a951af4587"
+    ],
+    "replay_id": "replay_0b9093551288905442a2",
+    "root_hash": "0b9093551288905442a219cb68ecc66b5267ab9ae0427ed2b369388c3cbca6c9",
+    "verified": true
+  },
+  "calibration": {
+    "capacity_factor": 1.0,
+    "charge_loss_factor": 0.03,
+    "discharge_loss_factor": 0.03,
+    "pv_correction_factor": 1.0,
+    "calibration_version": "calib_site_dka_alice_springs_20261024T175720.352580Z",
+    "scope_type": "site",
+    "scope_id": "dka_alice_springs",
+    "effective_charge_efficiency": 0.97,
+    "effective_discharge_efficiency": 0.97
+  },
+  "capsule_id": "86356bbb5e83ac0d4fc56bb9a15ad348906cace274a573602b57149336cabefc",
+  "dataset": {
+    "dataset_version": "dataset_8c7cb8f7a603",
+    "content_hash": "be85a7fa62482011bb5d4f128208d72046ccbd28c8c6992e0507182c21fa991a",
+    "trainable_row_count": 33951,
+    "total_row_count": 68090,
+    "split_row_counts": {
+      "test": 33827,
+      "train": 20263,
+      "validate": 14000
+    },
+    "trainable_row_counts_by_split": {
+      "test": 16764,
+      "train": 9844,
+      "validate": 7343
+    },
+    "split_boundaries": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:00:00+00:00",
+        "count": 33827
+      },
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 20263
+      },
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "split_policy": "pre_assigned (upstream protocol)"
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_b979cd9917",
+    "diagnostics": {
+      "n_train_rows": 9844,
+      "train_time_start": "2022-01-01 00:00:00+00:00",
+      "train_time_end": "2022-08-07 08:30:00+00:00",
+      "load_observed": false,
+      "clear_sky_rows": 9844
+    },
+    "solar_channel": {
+      "name": "clearness",
+      "mu": 0.0007945840542490279,
+      "rho": 0.9540647641938934,
+      "sigma": 0.19455420156537223,
+      "gamma": 0.954827320684539,
+      "obs_scale": 0.04546816012296441,
+      "obs_floor": 50.0,
+      "n_obs": 9844,
+      "profile": [
+        1.0473097892539098,
+        1.157337491134301,
+        1.120786992216676,
+        1.0857589428743137,
+        1.0909875320913582,
+        1.0693473439722396,
+        1.0658001004603646,
+        1.0423211420497933,
+        0.959684184598016,
+        0.9344297373303402,
+        0.9181648745321747,
+        0.9090769593464249,
+        0.8929706403224191,
+        0.8771739848826401,
+        0.8723066634599029
+      ],
+      "profile_edges": [
+        0.0,
+        6.0,
+        12.0,
+        18.0,
+        24.0,
+        30.0,
+        36.0,
+        42.0,
+        48.0,
+        54.0,
+        60.0,
+        66.0,
+        72.0,
+        78.0,
+        84.0,
+        90.0
+      ],
+      "season_cos": 0.0,
+      "season_sin": 0.0,
+      "spread_factor": 1.2953125,
+      "se": {
+        "mu": 0.002286839670498254,
+        "rho": 0.011185234498522531,
+        "sigma": 0.0015387593678071404,
+        "gamma": 0.00293783671687918,
+        "obs_scale": 0.0005085720331917279
+      },
+      "diagnostics": {
+        "status": "ok",
+        "daylight_obs": 9844,
+        "lit_obs": 7993,
+        "clear_sky_ratio_median": 0.9356312614162736,
+        "clear_sky_ratio_std": 0.34159888316208803,
+        "ar1_marginal_std_implied": 0.6493788838097609,
+        "state_std_daylight": 0.5502173998031809,
+        "profile_peak": 1.157337491134301,
+        "season_cos": 0.11366448421495734,
+        "season_sin": -0.08747507967423633,
+        "season_amplitude": 0.1434276979382514,
+        "ar_residual_autocorr": -0.047185805185035554,
+        "innovation_rmse_w": 12402.0071201865,
+        "one_step_rmse_w": 5026.802531780262,
+        "one_step_mae_w": 1471.5444490680472,
+        "coverage_hint": "solar P10-P90 band from the filtered predictive spread",
+        "seasonality_selection": {
+          "selected": "none",
+          "validation_mae_with_season": 8562.158,
+          "validation_mae_without_season": 8479.119,
+          "fitted_amplitude": 0.1434276979382514
+        },
+        "spread_calibration": {
+          "calibrated": true,
+          "target_coverage": 0.78,
+          "achieved_validation_coverage": 0.7344,
+          "spread_factor": 1.2953,
+          "n_windows": 6,
+          "n_scenarios": 120
+        }
+      }
+    },
+    "load_channel": {
+      "name": "load_scale",
+      "mu": 1.0,
+      "rho": 0.0,
+      "sigma": 0.05,
+      "gamma": 1.0,
+      "obs_scale": 0.0,
+      "obs_floor": 10.0,
+      "n_obs": 0,
+      "profile": [],
+      "profile_edges": [],
+      "season_cos": 0.0,
+      "season_sin": 0.0,
+      "spread_factor": 1.0,
+      "se": {
+        "mu": 1.0,
+        "rho": 1.0,
+        "sigma": 1.0,
+        "gamma": 1.0,
+        "obs_scale": 1.0
+      },
+      "diagnostics": {
+        "status": "declared_no_measurements"
+      }
+    }
+  },
+  "residual": {
+    "enabled": true,
+    "residual_version": "resid_solar_w_ade0a65c7f",
+    "family": "ridge",
+    "target": "solar_w",
+    "w_max": 0.2,
+    "selected_w": 0.11,
+    "selection_scores": [
+      {
+        "w": 0.0,
+        "mae": 8479.342601976407
+      },
+      {
+        "w": 0.01,
+        "mae": 8477.913724298345
+      },
+      {
+        "w": 0.02,
+        "mae": 8476.708075656446
+      },
+      {
+        "w": 0.03,
+        "mae": 8475.681312505798
+      },
+      {
+        "w": 0.04,
+        "mae": 8474.832931463545
+      },
+      {
+        "w": 0.05,
+        "mae": 8474.127782885074
+      },
+      {
+        "w": 0.06,
+        "mae": 8473.531416132872
+      },
+      {
+        "w": 0.07,
+        "mae": 8473.023964228678
+      },
+      {
+        "w": 0.08,
+        "mae": 8472.637269012737
+      },
+      {
+        "w": 0.09,
+        "mae": 8472.362442852698
+      },
+      {
+        "w": 0.1,
+        "mae": 8472.19675831458
+      },
+      {
+        "w": 0.11,
+        "mae": 8472.138202169544
+      },
+      {
+        "w": 0.12,
+        "mae": 8472.170029256837
+      },
+      {
+        "w": 0.13,
+        "mae": 8472.306494696631
+      },
+      {
+        "w": 0.14,
+        "mae": 8472.53224932317
+      },
+      {
+        "w": 0.15,
+        "mae": 8472.834207635051
+      },
+      {
+        "w": 0.16,
+        "mae": 8473.227882060011
+      },
+      {
+        "w": 0.17,
+        "mae": 8473.682622739725
+      },
+      {
+        "w": 0.18,
+        "mae": 8474.206321920217
+      },
+      {
+        "w": 0.19,
+        "mae": 8474.790797392601
+      },
+      {
+        "w": 0.2,
+        "mae": 8475.456961685006
+      }
+    ],
+    "train_diagnostics": {
+      "n_rows": 9844,
+      "rmse": 12264.972832185234,
+      "baseline_rmse": 12368.202962833484,
+      "r2_vs_mean": 0.01662316349468429
+    },
+    "validation_mae_at_selected_w": 8472.138202169544,
+    "validation_mae_at_w0": 8479.342601976407,
+    "note": "The load target has no residual corrector: the DKASC reference site has no load meter, so the load residual would be unidentifiable."
+  },
+  "governor": {
+    "state": "active",
+    "w": 0.11,
+    "w_max": 0.2,
+    "breaches": 0,
+    "healthy_streak": 0,
+    "policy_version": "governor_v3.0",
+    "history": [
+      {
+        "event_id": "gov_42ff99c0d1bc4034",
+        "batch_id": "manual",
+        "previous_state": "active",
+        "state": "active",
+        "w": 0.11,
+        "c": 0.0,
+        "rho": 0.0,
+        "signals_json": "{\"actor\": \"pipeline\", \"w\": 0.11}",
+        "action": "force_set_weight",
+        "created_at_utc": "2026-10-24T17:57:26.198634Z"
+      }
+    ],
+    "effective_w": 0.11
+  },
+  "tribunal": {
+    "policy_version": "tribunal_v3.0",
+    "mean_survival_rate": 0.944375,
+    "min_survival_rate": 0.855,
+    "total_proposed": 8000,
+    "total_rejected": 445,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 344,
+      "SOLAR_OVERSCALE": 101,
+      "GRID_EXPORT_LIMIT": 4,
+      "GRID_IMPORT_LIMIT": 2
+    }
+  },
+  "confidence": {
+    "mean_confidence": 0.46761684871463116,
+    "mean_uncertainty": 0.5046334225216231,
+    "status_counts": {
+      "eligible_for_human_review": 35,
+      "reduced_confidence": 5
+    },
+    "policy_version": "confidence_v3.0"
+  },
+  "evaluation": {
+    "split": "validate",
+    "n_windows": 40,
+    "solar_w": {
+      "mae_mean": 21143.31428776042,
+      "rmse_mean": 28568.03548588187,
+      "bias_mean": 4402.7420640625005,
+      "coverage_mean": 0.8059895833333334,
+      "energy_error_wh_mean": 350591.971855,
+      "n_windows": 40
+    }
+  },
+  "windows": 40,
+  "store_path": "var/w1_protocol_val.db"
+}

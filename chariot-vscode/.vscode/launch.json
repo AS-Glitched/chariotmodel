@@ -2,10 +2,39 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "CHARIOT prototype",
+      "name": "CHARIOT v3 — full-year run",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/scripts/run_prototype.py",
+      "program": "${workspaceFolder}/scripts/run_chariot3.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["--scenarios", "200", "--max-windows", "40"]
+    },
+    {
+      "name": "CHARIOT v3 — prepare Alice Springs dataset",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/prepare_dataset.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["--source", "${env:DKA_CSV}"]
+    },
+    {
+      "name": "CHARIOT v3 — Advisory API",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["chariot.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "${workspaceFolder}" }
+    },
+    {
+      "name": "CHARIOT v3 — tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests", "-q"],
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}"
     }

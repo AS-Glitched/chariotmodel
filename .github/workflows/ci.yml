@@ -1,0 +1,65 @@
+name: chariot-v3
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: tests (python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: chariot-vscode/requirements.txt
+
+      - name: Install dependencies
+        working-directory: chariot-vscode
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the test suite
+        working-directory: chariot-vscode
+        run: python -m pytest tests -q
+
+      - name: Import-surface smoke check
+        working-directory: chariot-vscode
+        run: |
+          python -c "
+          import importlib
+          for name in [
+              'config', 'hashing', 'store', 'site_master', 'admissibility',
+              'river_flow', 'calibration', 'capsule', 'training_extract',
+              'physics', 'model', 'residual', 'genesis', 'tribunal',
+              'governor', 'feedback', 'confidence', 'advisory', 'metrics',
+              'pipeline', 'api',
+          ]:
+              importlib.import_module(f'chariot.{name}')
+          print('all 21 chariot modules import cleanly')
+          "
+
+      - name: Optional PyMC reference module must import without PyMC
+        working-directory: chariot-vscode
+        run: |
+          python -c "
+          from chariot.pymc_clearness import pymc_available
+          assert isinstance(pymc_available(), bool)
+          print('the offline reference module imports cleanly (PyMC present:', pymc_available(), ')')
+          "
+
+      # The PyMC reference tests need the optional extra and are therefore
+      # not part of the default matrix.  Run them with:
+      #   pip install -r requirements-pymc.txt && python -m pytest tests -q -m pymc

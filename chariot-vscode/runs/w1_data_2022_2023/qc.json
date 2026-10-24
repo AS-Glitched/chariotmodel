@@ -1,0 +1,175 @@
+{
+  "stage": "W1",
+  "protocol": "year2022_2023",
+  "slices": {
+    "train_2022": {
+      "label": "train_2022",
+      "rows": 21001,
+      "cadence": {
+        "duplicates": 0,
+        "monotonic": true,
+        "non_15min_steps": 0,
+        "distinct_step_minutes": [
+          15.0
+        ],
+        "cadence_ok": true
+      },
+      "night": {
+        "n_night_rows": 10771,
+        "max_night_solar_w": 0.0,
+        "night_nonzero_rows": 0,
+        "ok": true
+      },
+      "clear_sky_distinct": {
+        "identical_to_solar": false,
+        "max_abs_difference_w": 192569.9285,
+        "correlation": 0.9472235451514862,
+        "ok": true
+      },
+      "kt_over_one": {
+        "n_daylight_rows": 9849,
+        "pct_gt_1_05": 27.67793684638034,
+        "pct_gt_1_20": 5.1984973093715094,
+        "max_ratio": 10.218033779800287,
+        "p50_ratio": 0.9356059842364667,
+        "p05_ratio": 0.1452975448180481,
+        "p95_ratio": 1.2023955185408957
+      },
+      "energy": {
+        "max_solar_w": 191902.832,
+        "max_solar_x_rated": 0.8722856,
+        "max_clear_sky_w": 205165.5604,
+        "ok": true
+      },
+      "gaps": {
+        "is_gap_rows": 747,
+        "nan_solar_rows": 738
+      },
+      "status": "ok"
+    },
+    "validate_2022": {
+      "label": "validate_2022",
+      "rows": 14000,
+      "cadence": {
+        "duplicates": 0,
+        "monotonic": true,
+        "non_15min_steps": 0,
+        "distinct_step_minutes": [
+          15.0
+        ],
+        "cadence_ok": true
+      },
+      "night": {
+        "n_night_rows": 6655,
+        "max_night_solar_w": 0.0,
+        "night_nonzero_rows": 0,
+        "ok": true
+      },
+      "clear_sky_distinct": {
+        "identical_to_solar": false,
+        "max_abs_difference_w": 191958.47319999998,
+        "correlation": 0.9036256298468973,
+        "ok": true
+      },
+      "kt_over_one": {
+        "n_daylight_rows": 7345,
+        "pct_gt_1_05": 22.45064669843431,
+        "pct_gt_1_20": 4.969366916269571,
+        "max_ratio": 3.697697674791425,
+        "p50_ratio": 0.9038160251675661,
+        "p05_ratio": 0.06656682721456145,
+        "p95_ratio": 1.1995459318285138
+      },
+      "energy": {
+        "max_solar_w": 202564.4684,
+        "max_solar_x_rated": 0.9207475836363637,
+        "max_clear_sky_w": 203304.1063,
+        "ok": true
+      },
+      "gaps": {
+        "is_gap_rows": 2,
+        "nan_solar_rows": 0
+      },
+      "status": "ok"
+    },
+    "test_2023": {
+      "label": "test_2023",
+      "rows": 35002,
+      "cadence": {
+        "duplicates": 0,
+        "monotonic": true,
+        "non_15min_steps": 0,
+        "distinct_step_minutes": [
+          15.0
+        ],
+        "cadence_ok": true
+      },
+      "night": {
+        "n_night_rows": 17429,
+        "max_night_solar_w": 0.0,
+        "night_nonzero_rows": 0,
+        "ok": true
+      },
+      "clear_sky_distinct": {
+        "identical_to_solar": false,
+        "max_abs_difference_w": 188298.7134,
+        "correlation": 0.9359809365423641,
+        "ok": true
+      },
+      "kt_over_one": {
+        "n_daylight_rows": 16931,
+        "pct_gt_1_05": 18.852991553954286,
+        "pct_gt_1_20": 1.2875789971059004,
+        "max_ratio": 4.852407476559079,
+        "p50_ratio": 0.9183155134979317,
+        "p05_ratio": 0.09068815963683713,
+        "p95_ratio": 1.12651730170306
+      },
+      "energy": {
+        "max_solar_w": 204925.2625,
+        "max_solar_x_rated": 0.931478465909091,
+        "max_clear_sky_w": 204570.9629,
+        "ok": true
+      },
+      "gaps": {
+        "is_gap_rows": 1464,
+        "nan_solar_rows": 1175
+      },
+      "status": "ok"
+    }
+  },
+  "content_hashes": {
+    "train_2022": "70713449bca00edb28263a6da58b6e567e4b01b5b51aa505d15d036bc764aa49",
+    "validate_2022": "052c1d161cb53e940df286a90c75ba296505c191e075dbfee340e330986d760a",
+    "test_2023": "6dc97430d82a10a2116ecbd22cc70eb4b9980a68608dc3f7a9e4b17ecf6c4acf",
+    "combined": "17e207367329b7af8b58c2b9bc52c5daadec97f95cc57e52499ce818bffaabbc"
+  },
+  "split_boundaries": {
+    "train_2022": {
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 21001
+      }
+    },
+    "validate_2022": {
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "test_2023": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:15:00+00:00",
+        "count": 35002
+      }
+    }
+  },
+  "notes": [
+    "The two years use **different clear-sky models**: the 2022 export was built with a 15 degree tilt, the 2023 export with a 17.5 degree tilt (both single-plane equivalents inferred from the measured POA).  That is a change of the *reference*, not of the site, and it is the first suspect for the year-to-year shift in the clearness ratio.",
+    "The clearness ratio above 1.0 (the 'clear-sky under-binding') is the known defect this stage quantifies; W2 (the clear-sky upgrade) is gated on the 2022 validation slice and the 2023 slice is reported once.",
+    "The load, battery and SOC channels are **declared** site-card assumptions; nothing in this stage measures them."
+  ]
+}

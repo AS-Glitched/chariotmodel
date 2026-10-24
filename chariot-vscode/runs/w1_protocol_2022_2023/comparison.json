@@ -1,0 +1,308 @@
+{
+  "stage_id": "W1",
+  "title": "Data + protocol (2022 \u2192 2023)",
+  "protocol": {
+    "name": "year2022_2023",
+    "version": "chariot_protocol_2022_2023_v1.0",
+    "description": "TRAIN = the first 60 % of the 2022 window; VALIDATE = the remaining 40 % of the 2022 window; TEST = the whole 2023 window (report only, never fitted, never selected on).  The 2022 test tail of the legacy 60/20/20 protocol is discarded on purpose.",
+    "train": "first 60 % of the 2022 window (fit only)",
+    "validate": "remaining 40 % of the 2022 window (selection only)",
+    "test": "the whole 2023 window (report only \u2014 never fitted, never selected on)",
+    "model change": "none \u2014 the v3 ops spine is untouched (W1 is data and protocol only)"
+  },
+  "data": {
+    "content_hashes": {
+      "train_2022": "70713449bca00edb28263a6da58b6e567e4b01b5b51aa505d15d036bc764aa49",
+      "validate_2022": "052c1d161cb53e940df286a90c75ba296505c191e075dbfee340e330986d760a",
+      "test_2023": "6dc97430d82a10a2116ecbd22cc70eb4b9980a68608dc3f7a9e4b17ecf6c4acf",
+      "combined": "17e207367329b7af8b58c2b9bc52c5daadec97f95cc57e52499ce818bffaabbc"
+    },
+    "split_boundaries": {
+      "train_2022": {
+        "train": {
+          "min": "2022-01-01 00:00:00+00:00",
+          "max": "2022-08-07 18:00:00+00:00",
+          "count": 21001
+        }
+      },
+      "validate_2022": {
+        "validate": {
+          "min": "2022-08-07 18:15:00+00:00",
+          "max": "2022-12-31 14:00:00+00:00",
+          "count": 14000
+        }
+      },
+      "test_2023": {
+        "test": {
+          "min": "2023-01-01 00:00:00+00:00",
+          "max": "2023-12-31 14:15:00+00:00",
+          "count": 35002
+        }
+      }
+    },
+    "qc": {
+      "train_2022": {
+        "label": "train_2022",
+        "rows": 21001,
+        "cadence": {
+          "duplicates": 0,
+          "monotonic": true,
+          "non_15min_steps": 0,
+          "distinct_step_minutes": [
+            15.0
+          ],
+          "cadence_ok": true
+        },
+        "night": {
+          "n_night_rows": 10771,
+          "max_night_solar_w": 0.0,
+          "night_nonzero_rows": 0,
+          "ok": true
+        },
+        "clear_sky_distinct": {
+          "identical_to_solar": false,
+          "max_abs_difference_w": 192569.9285,
+          "correlation": 0.9472235451514862,
+          "ok": true
+        },
+        "kt_over_one": {
+          "n_daylight_rows": 9849,
+          "pct_gt_1_05": 27.67793684638034,
+          "pct_gt_1_20": 5.1984973093715094,
+          "max_ratio": 10.218033779800287,
+          "p50_ratio": 0.9356059842364667,
+          "p05_ratio": 0.1452975448180481,
+          "p95_ratio": 1.2023955185408957
+        },
+        "energy": {
+          "max_solar_w": 191902.832,
+          "max_solar_x_rated": 0.8722856,
+          "max_clear_sky_w": 205165.5604,
+          "ok": true
+        },
+        "gaps": {
+          "is_gap_rows": 747,
+          "nan_solar_rows": 738
+        },
+        "status": "ok"
+      },
+      "validate_2022": {
+        "label": "validate_2022",
+        "rows": 14000,
+        "cadence": {
+          "duplicates": 0,
+          "monotonic": true,
+          "non_15min_steps": 0,
+          "distinct_step_minutes": [
+            15.0
+          ],
+          "cadence_ok": true
+        },
+        "night": {
+          "n_night_rows": 6655,
+          "max_night_solar_w": 0.0,
+          "night_nonzero_rows": 0,
+          "ok": true
+        },
+        "clear_sky_distinct": {
+          "identical_to_solar": false,
+          "max_abs_difference_w": 191958.47319999998,
+          "correlation": 0.9036256298468973,
+          "ok": true
+        },
+        "kt_over_one": {
+          "n_daylight_rows": 7345,
+          "pct_gt_1_05": 22.45064669843431,
+          "pct_gt_1_20": 4.969366916269571,
+          "max_ratio": 3.697697674791425,
+          "p50_ratio": 0.9038160251675661,
+          "p05_ratio": 0.06656682721456145,
+          "p95_ratio": 1.1995459318285138
+        },
+        "energy": {
+          "max_solar_w": 202564.4684,
+          "max_solar_x_rated": 0.9207475836363637,
+          "max_clear_sky_w": 203304.1063,
+          "ok": true
+        },
+        "gaps": {
+          "is_gap_rows": 2,
+          "nan_solar_rows": 0
+        },
+        "status": "ok"
+      },
+      "test_2023": {
+        "label": "test_2023",
+        "rows": 35002,
+        "cadence": {
+          "duplicates": 0,
+          "monotonic": true,
+          "non_15min_steps": 0,
+          "distinct_step_minutes": [
+            15.0
+          ],
+          "cadence_ok": true
+        },
+        "night": {
+          "n_night_rows": 17429,
+          "max_night_solar_w": 0.0,
+          "night_nonzero_rows": 0,
+          "ok": true
+        },
+        "clear_sky_distinct": {
+          "identical_to_solar": false,
+          "max_abs_difference_w": 188298.7134,
+          "correlation": 0.9359809365423641,
+          "ok": true
+        },
+        "kt_over_one": {
+          "n_daylight_rows": 16931,
+          "pct_gt_1_05": 18.852991553954286,
+          "pct_gt_1_20": 1.2875789971059004,
+          "max_ratio": 4.852407476559079,
+          "p50_ratio": 0.9183155134979317,
+          "p05_ratio": 0.09068815963683713,
+          "p95_ratio": 1.12651730170306
+        },
+        "energy": {
+          "max_solar_w": 204925.2625,
+          "max_solar_x_rated": 0.931478465909091,
+          "max_clear_sky_w": 204570.9629,
+          "ok": true
+        },
+        "gaps": {
+          "is_gap_rows": 1464,
+          "nan_solar_rows": 1175
+        },
+        "status": "ok"
+      }
+    }
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_b979cd9917",
+    "clear_sky_version": "source export clear-sky (2022: 15\u00b0 tilt; 2023: 17.5\u00b0 tilt) \u2014 unchanged in W1, upgraded in W2",
+    "residual_version": "resid_solar_w_ade0a65c7f",
+    "selected_w": 0.11,
+    "tribunal_policy": "tribunal_v3.0"
+  },
+  "metrics": {
+    "validate_2022 (selection)": {
+      "mae_mean": 21143.31428776042,
+      "rmse_mean": 28568.03548588187,
+      "bias_mean": 4402.7420640625005,
+      "coverage_mean": 0.8059895833333334,
+      "energy_error_wh_mean": 350591.971855,
+      "n_windows": 40,
+      "survival_rate": 0.944375,
+      "min_survival_rate": 0.855
+    },
+    "test_2023 (report only)": {
+      "mae_mean": 17162.983202864583,
+      "rmse_mean": 23222.6031273396,
+      "bias_mean": 3217.8837706249988,
+      "coverage_mean": 0.88828125,
+      "energy_error_wh_mean": 256890.22921000008,
+      "n_windows": 40,
+      "survival_rate": 0.90625,
+      "min_survival_rate": 0.41
+    }
+  },
+  "baselines": {
+    "validate_2022 :: persistence_origin": {
+      "mae_mean": 69053.54277322916,
+      "rmse_mean": 84244.15814806668,
+      "bias_mean": 9641.87102072917,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: clear_sky_naive": {
+      "mae_mean": 22757.437001119793,
+      "rmse_mean": 32241.443537394247,
+      "bias_mean": 15362.542924453126,
+      "energy_error_wh_mean": 451934.585925625
+    },
+    "test_2023 :: persistence_origin": {
+      "mae_mean": 68233.87436348958,
+      "rmse_mean": 82049.8490483764,
+      "bias_mean": -4082.6759157812485,
+      "energy_error_wh_mean": null
+    },
+    "test_2023 :: clear_sky_naive": {
+      "mae_mean": 20303.561673723958,
+      "rmse_mean": 28940.617426788034,
+      "bias_mean": 17518.527920859375,
+      "energy_error_wh_mean": 424765.353316875
+    }
+  },
+  "gates": [
+    {
+      "name": "2022 train / validate / 2023 test boundaries are exact",
+      "target": "train < validate < test, test entirely in 2023",
+      "observed": "train 2022-01-01\u21922022-08-07, validate 2022-08-07\u21922022-12-31, test 2023-01-01\u21922023-12-31",
+      "pass": true
+    },
+    {
+      "name": "QC: night solar \u2248 0",
+      "target": "max night solar = 0 W in every slice",
+      "observed": "train 0.000 W, validate 0.000 W, test 0.000 W",
+      "pass": true
+    },
+    {
+      "name": "QC: strict monotonic 15-minute cadence",
+      "target": "0 duplicates, 0 non-15-min steps",
+      "observed": "0 duplicates and 0 non-15-min steps in all three slices",
+      "pass": true
+    },
+    {
+      "name": "QC: clear-sky reference is a distinct series",
+      "target": "clear_sky_w \u2260 solar_w",
+      "observed": "max |\u0394| 192.6 kW (2022) / 188.3 kW (2023), correlation 0.90\u20130.95",
+      "pass": true
+    },
+    {
+      "name": "QC: daylight clearness > 1.05 quantified",
+      "target": "reported per slice",
+      "observed": "train 27.68 %, validate 22.45 %, test 18.85 %",
+      "pass": true
+    },
+    {
+      "name": "QC: daylight clearness > 1.20 quantified",
+      "target": "reported per slice",
+      "observed": "train 5.20 %, validate 4.97 %, test 1.29 %",
+      "pass": true
+    },
+    {
+      "name": "No model change in W1",
+      "target": "the ops default stays the versioned NumPy path",
+      "observed": "ops model_version unchanged (hcbsswm_v3.0_empirical_bayes_b979cd9917); only the data/protocol changed",
+      "pass": true
+    },
+    {
+      "name": "The clear-sky reference differs between the two years",
+      "target": "diagnostic (not a gate): a single consistent clear-sky geometry",
+      "observed": "2022 export used a 15\u00b0 tilt, the 2023 export a 17.5\u00b0 tilt (single-plane equivalents) \u2192 the year-over-year clearness shift is a clear-sky artefact, not a plant artefact",
+      "pass": false,
+      "note": "This is the W2 entry point. W1 reports it; W1 does not repair it, and nothing is fitted to the 2023 error."
+    }
+  ],
+  "claims": {
+    "allowed": [
+      "The 2022 \u2192 2023 protocol is reproducible from the two source exports (content hashes and exact boundaries are in the manifest).",
+      "The QC numbers for both years are measured, not assumed.",
+      "The ops v3 spine runs unchanged on the new protocol and its 2023 numbers are reported once, as a report-only baseline.",
+      "The 2022 validation numbers are the selection metrics for every later stage."
+    ],
+    "forbidden": [
+      "Any claim of forecast skill on 2023 \u2014 2023 is a report-only window.",
+      "Any claim that the 2022 and 2023 clear-sky references are the same geometry.",
+      "Any weather-forecast or DSM/CERC readiness claim.",
+      "Any control action: the platform remains advisory-only."
+    ]
+  },
+  "notes": [
+    "Both exports carry 35,040 rows on a strict 15-minute grid with no duplicate timestamps; 2022 has 749 `is_gap` rows and 2023 has 1,464. `solar_w` is NaN on the gap rows, so the QC masks non-finite values.",
+    "The worst 2023 window is 2023-01-22 07:00 UTC with a survival rate of 0.41, dominated by 115 SOLAR_RAMP_LIMIT rejections: a clear-sky ramp artefact, which is what W2 targets. The Tribunal is not relaxed.",
+    "The 2023 daylight clearness rate above 1.05 (18.85 %) is already lower than the 2022 rate (27.68 %) because the 2023 export uses a 17.5\u00b0 tilt \u2014 the shift between the years is a reference change, not a change in the plant.",
+    "Residual selection (w = 0.11) is unchanged: it is selected on the 2022 validation split only."
+  ]
+}
