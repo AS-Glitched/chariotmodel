@@ -4,9 +4,9 @@ CHARIOT v3 + THE OFFLINE PyMC REFERENCE — COMPLETE ENGINEERING REPORT
 Every formula, every rule, every test, every result and the complete source code, in one file.
 repository   : https://github.com/AS-Glitched/chariotmodel
 branch       : arena/eb404247-chariotmodel
-commit       : a744f61693f1
+commit       : e771c6d8ce9d
 pull request : #1 (open)
-generated    : 2026-10-24 17:58 UTC
+generated    : 2026-10-24 18:04 UTC
 generator    : scripts/build_full_report.py
 
 CONTENTS
@@ -10563,8 +10563,8 @@ SOURCE: scripts/prepare_dataset.py
 ==============================================================================
 materialise the Parquet slice + the 60/20/20 split
 file   : chariot-vscode/scripts/prepare_dataset.py
-lines  : 332
-bytes  : 13152
+lines  : 402
+bytes  : 16285
 ------------------------------------------------------------------------------
 #!/usr/bin/env python3
 """Prepare the DKASC Alice Springs telemetry for a CHARIOT run.
@@ -10753,6 +10753,63 @@ def prepare_year2022_2023(args: argparse.Namespace) -> int:
     f23["split_year"] = 2023
     test_2023 = f23.reset_index(drop=True)
 
+    # -- the clear-sky reference (W2) -------------------------------------
+    # "export" keeps the reference the DKASC export shipped (the 2022 and
+    # the 2023 exports do not share it -- that is the defect W2 repairs).
+    # "chariot_v2" rebuilds one documented reference for both years, with
+    # the geometry inferred from the *training* year's measured POA.
+    clear_sky_info: dict[str, Any] = {"source": args.clearsky}
+    if args.clearsky == "chariot_v2":
+        from chariot.clearsky import (  # noqa: PLC0415
+            CLEAR_SKY_VERSION,
+            clearness_diagnostics,
+            compute_clear_sky,
+            infer_fixed_plane_geometry,
+            tracker_reference_rmse,
+        )
+
+        inference = infer_fixed_plane_geometry(train_2022)
+        geometry = inference["geometry"]
+        tracker_rmse = tracker_reference_rmse(train_2022, geometry)
+        # The clearness diagnostics of the *exported* reference, captured
+        # before it is replaced.
+        before = {
+            name: clearness_diagnostics(
+                frame["solar_w"].to_numpy(dtype=float),
+                frame["clear_sky_w"].to_numpy(dtype=float),
+            )
+            for name, frame in (
+                ("train_2022", train_2022),
+                ("validate_2022", validate_2022),
+                ("test_2023", test_2023),
+            )
+        }
+        for frame in (train_2022, validate_2022, test_2023):
+            reference = compute_clear_sky(
+                frame, geometry, rated_pv_w=args.rated_pv_w
+            )
+            frame["clear_sky_poa_w_m2"] = reference["clear_sky_poa_w_m2"].to_numpy()
+            frame["clear_sky_w"] = reference["clear_sky_w"].to_numpy()
+            frame["kt"] = reference["kt"].to_numpy()
+            frame["clear_sky_version"] = CLEAR_SKY_VERSION
+        clear_sky_info = {
+            "source": "chariot_v2",
+            "clear_sky_version": CLEAR_SKY_VERSION,
+            "geometry": geometry.as_dict(),
+            "geometry_inference": {
+                "target": "measured poa_w_m2 on the 2022 train slice",
+                "best": inference["best"],
+                "grid_top": inference["grid"],
+            },
+            "tracker_reference_rmse_w_m2": tracker_rmse,
+            "clearness_before": before,
+            "note": (
+                "The array layout is not in the export, so no tracker mix is "
+                "invented: the documented equivalent is the single fixed plane "
+                "that best reproduces the measured POA of the training year."
+            ),
+        }
+
     slices = {
         "train_2022": train_2022,
         "validate_2022": validate_2022,
@@ -10813,6 +10870,7 @@ def prepare_year2022_2023(args: argparse.Namespace) -> int:
         "columns": list(combined.columns),
         "selection_split": "validate_2022",
         "test_split_usage": "report only",
+        "clear_sky": clear_sky_info,
     }
     manifest_path = data_dir / "dka_alice_springs_2022_2023.manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -10876,6 +10934,18 @@ def main() -> int:
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--data-dir", default=str(PROTOCOL_DATA_DIR))
     parser.add_argument("--rated-pv-w", type=float, default=220_000.0)
+    parser.add_argument(
+        "--clearsky",
+        default="chariot_v2",
+        choices=["export", "chariot_v2"],
+        help=(
+            "clear-sky reference: 'chariot_v2' (default, promoted in W2) rebuilds "
+            "one documented reference for both years, with the geometry inferred "
+            "from the training year's measured POA; 'export' keeps the reference "
+            "the DKASC export shipped (the 2022 and 2023 exports do not share it) "
+            "and reproduces the W1 baseline"
+        ),
+    )
     parser.add_argument(
         "--train-frac", type=float, default=0.60, help="train fraction (default 0.60)"
     )
@@ -13398,8 +13468,8 @@ FILE: requirements.txt
 ==============================================================================
 the operational dependencies
 file   : chariot-vscode/requirements.txt
-lines  : 17
-bytes  : 344
+lines  : 23
+bytes  : 604
 ------------------------------------------------------------------------------
 # CHARIOT v3 — runtime dependencies
 #
@@ -13410,6 +13480,12 @@ bytes  : 344
 numpy>=1.26
 pandas>=2.2
 pyarrow>=15
+
+# Data preparation only (never the operational model path): the CHARIOT
+# clear-sky reference (chariot/clearsky.py) rebuilds the clear-sky series
+# with pvlib's Ineichen model, the Linke-turbidity climatology and the
+# Hay-Davies transposition.
+pvlib==0.16.1
 
 fastapi>=0.110
 uvicorn>=0.27
@@ -13452,8 +13528,8 @@ FILE: README.md
 ==============================================================================
 the README
 file   : chariot-vscode/README.md
-lines  : 339
-bytes  : 17718
+lines  : 379
+bytes  : 20015
 ------------------------------------------------------------------------------
 # CHARIOT v3
 
@@ -13760,7 +13836,47 @@ year-over-year clearness shift is a *reference* artefact — W2's entry point.
 Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
 20,304 W (2023 test); persistence-at-origin 69,054 W and 68,234 W.
 
-## 10. What this repository is not
+## 10. The clear-sky reference (W2)
+
+The two DKASC exports do **not** share a clear-sky reference: the 2022 export
+used a 15° fixed plane, the 2023 export a 17.5° one. Worse, the exported
+reference is *below* the measured plane-of-array irradiance on clear days, so
+the plant "beat its own clear sky" on a quarter of the 2022 daylight rows
+(clearness above 1.05, maximum above 3) — physically impossible, and the
+reason a quarter of the scenarios were rejected as overscale.
+
+`chariot/clearsky.py` rebuilds the reference from first principles:
+
+1. **Geometry from the data.** The array layout is not in the export, so no
+   tracker mix is invented. The best fixed plane is inferred from the
+   *measured* POA of the 2022 train slice: **15° north**, RMSE 39.6 W/m²,
+   against 174.3 W/m² for a single-axis tracker on the same rows (the fixed
+   plane wins by 4.4×).
+2. **A published clear-sky model.** Ineichen/Perez with the static pvlib
+   Linke-turbidity climatology, transposed with Hay-Davies. The climatology
+   carries no year-specific information, so applying it to the report-only
+   year leaks nothing.
+3. **A published DC conversion.** `clear_sky_w = poa_w_m2 × rated_pv_w / 1176`
+   — the same nominal conversion the export used, so the two references are
+   directly comparable.
+
+The reference is a **data-preparation** step (pvlib); the operational model
+path stays pure NumPy.
+
+| 2022 validation window | exported reference | clear-sky v2 |
+| --- | --- | --- |
+| daylight clearness > 1.05 | 22.45 % | **1.78 %** |
+| daylight clearness > 1.20 | 4.97 % | **1.63 %** |
+| clear-sky naive baseline (MAE) | 22,757 W | 41,560 W |
+| ops MAE | 21,143 W | 21,312 W |
+| ops survival (mean / min) | 0.944 / 0.855 | **0.956 / 0.930** |
+| SOLAR_OVERSCALE rejections | 101 | **21** |
+
+The naive baseline got *worse* — the old reference was rigged low — while the
+model's margin over it grew from 1,614 W to 20,248 W, and the physically
+impossible overscale rejections collapsed. The Tribunal was not touched.
+
+## 11. What this repository is not
 
 - Not a controller. No setpoints, no dispatch, no closed loop.
 - Not a financial guarantee. Investor/Government mode is a probabilistic planning view.
@@ -13770,7 +13886,7 @@ Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
   `baselines.py`, `synthetic.py`) and their run artefacts were superseded by v3 and
   removed; the history remains in git.
 
-## 11. Changelog (improvement programme W1 → W7)
+## 12. Changelog (improvement programme W1 → W7)
 
 The operational default is the **versioned NumPy clearness SSM**
 (`chariot/model.py`). Every model change bumps the model version, and a stage
@@ -13780,7 +13896,7 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 | stage | what landed | model version | gate |
 | --- | --- | --- | --- |
 | W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
-| W2 | clear-sky upgrade | — | pending |
+| W2 | clear-sky upgrade: one documented reference for both years (`chariot/clearsky.py`, `chariot_clearsky_v2.0_fixed_plane`) | unchanged (`hcbsswm_v3.0_empirical_bayes_*`), reference versioned separately | PASS — daylight kt>1.05 on 2022 val 22.45 % → 1.78 %, validation MAE +0.8 %, survival 0.944 → 0.956 |
 | W3 | ops bias / hour-elevation calibration | — | pending |
 | W4 | constrained residual chamber | — | pending |
 | W5 | baselines and metric honesty | — | pending |
@@ -13789,7 +13905,7 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 
 Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
 
-## 12. License / attribution
+## 13. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.
@@ -23834,7 +23950,8 @@ bytes  : 177753
 PART 10 — THE COMMIT HISTORY
 ==============================================================================
 How the repository got here.
-a744f61 (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) docs: publish the complete CHARIOT report as a single text file
+e771c6d (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) W1: 2022->2023 evaluation protocol, dataset QC, stage reports
+a744f61 docs: publish the complete CHARIOT report as a single text file
 ad806c0 docs: sharpen the diagnosis of the reference posterior's non-convergence
 79fa481 feat(reference): make the offline PyMC clearness reference identifiable and publish the ops-vs-PyMC comparison
 782de77 feat: add an offline PyMC reference path for the solar clearness channel
@@ -23845,12 +23962,31 @@ c880b91 (grafted, origin/main, origin/HEAD, main) first
 
 ------------------------------------------------------------------------------
 The most recent commit in detail:
-a744f61 docs: publish the complete CHARIOT report as a single text file
- chariot-vscode/README.md                    |     4 +
- chariot-vscode/docs/CHARIOT_FULL_REPORT.txt | 23482 ++++++++++++++++++++++++++
- chariot-vscode/scripts/build_full_report.py |   228 +
- 3 files changed, 23714 insertions(+)
+e771c6d W1: 2022->2023 evaluation protocol, dataset QC, stage reports
+ chariot-vscode/README.md                           |   83 +-
+ chariot-vscode/chariot/dataset_qc.py               |  257 ++
+ chariot-vscode/chariot/metrics.py                  |   10 +-
+ chariot-vscode/chariot/pipeline.py                 |   44 +-
+ chariot-vscode/chariot/stage_report.py             |  241 ++
+ chariot-vscode/chariot/training_extract.py         |   34 +-
+ chariot-vscode/docs/CHARIOT_FULL_REPORT.txt        |  504 +++-
+ chariot-vscode/runs/w1_data_2022_2023/qc.json      |  175 ++
+ chariot-vscode/runs/w1_data_2022_2023/summary.md   |   49 +
+ .../w1_ops_v3_protocol_2022_2023/manifest.json     |  374 +++
+ .../runs/w1_ops_v3_protocol_2022_2023/summary.json |   43 +
+ .../runs/w1_ops_v3_protocol_2022_2023/windows.json | 2771 ++++++++++++++++++++
+ .../runs/w1_ops_v3_val_2022/manifest.json          |  374 +++
+ .../runs/w1_ops_v3_val_2022/summary.json           |   43 +
+ .../runs/w1_ops_v3_val_2022/windows.json           | 2756 +++++++++++++++++++
+ .../runs/w1_protocol_2022_2023/comparison.json     |  308 +++
+ .../runs/w1_protocol_2022_2023/summary.md          |   97 +
+ chariot-vscode/scripts/build_w1_report.py          |  218 ++
+ chariot-vscode/scripts/prepare_dataset.py          |  271 +-
+ chariot-vscode/scripts/run_chariot3.py             |   21 +
+ chariot-vscode/tests/test_dataset_qc.py            |  113 +
+ chariot-vscode/tests/test_protocol_splits.py       |  199 ++
+ 22 files changed, 8874 insertions(+), 111 deletions(-)
 ==============================================================================
 END OF REPORT
 ==============================================================================
-commit a744f61693f1 — arena/eb404247-chariotmodel — 2026-10-24 17:58 UTC
+commit e771c6d8ce9d — arena/eb404247-chariotmodel — 2026-10-24 18:04 UTC

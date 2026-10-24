@@ -143,6 +143,7 @@ def test_prepare_script_builds_the_three_protocol_slices(tmp_path: Path) -> None
         data_dir=str(tmp_path / "data"),
         rated_pv_w=220_000.0,
         train_frac=0.6,
+        clearsky="export",
     )
     rc = prepare_dataset.prepare_year2022_2023(args)
     assert rc == 0

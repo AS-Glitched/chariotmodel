@@ -303,7 +303,47 @@ year-over-year clearness shift is a *reference* artefact — W2's entry point.
 Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
 20,304 W (2023 test); persistence-at-origin 69,054 W and 68,234 W.
 
-## 10. What this repository is not
+## 10. The clear-sky reference (W2)
+
+The two DKASC exports do **not** share a clear-sky reference: the 2022 export
+used a 15° fixed plane, the 2023 export a 17.5° one. Worse, the exported
+reference is *below* the measured plane-of-array irradiance on clear days, so
+the plant "beat its own clear sky" on a quarter of the 2022 daylight rows
+(clearness above 1.05, maximum above 3) — physically impossible, and the
+reason a quarter of the scenarios were rejected as overscale.
+
+`chariot/clearsky.py` rebuilds the reference from first principles:
+
+1. **Geometry from the data.** The array layout is not in the export, so no
+   tracker mix is invented. The best fixed plane is inferred from the
+   *measured* POA of the 2022 train slice: **15° north**, RMSE 39.6 W/m²,
+   against 174.3 W/m² for a single-axis tracker on the same rows (the fixed
+   plane wins by 4.4×).
+2. **A published clear-sky model.** Ineichen/Perez with the static pvlib
+   Linke-turbidity climatology, transposed with Hay-Davies. The climatology
+   carries no year-specific information, so applying it to the report-only
+   year leaks nothing.
+3. **A published DC conversion.** `clear_sky_w = poa_w_m2 × rated_pv_w / 1176`
+   — the same nominal conversion the export used, so the two references are
+   directly comparable.
+
+The reference is a **data-preparation** step (pvlib); the operational model
+path stays pure NumPy.
+
+| 2022 validation window | exported reference | clear-sky v2 |
+| --- | --- | --- |
+| daylight clearness > 1.05 | 22.45 % | **1.78 %** |
+| daylight clearness > 1.20 | 4.97 % | **1.63 %** |
+| clear-sky naive baseline (MAE) | 22,757 W | 41,560 W |
+| ops MAE | 21,143 W | 21,312 W |
+| ops survival (mean / min) | 0.944 / 0.855 | **0.956 / 0.930** |
+| SOLAR_OVERSCALE rejections | 101 | **21** |
+
+The naive baseline got *worse* — the old reference was rigged low — while the
+model's margin over it grew from 1,614 W to 20,248 W, and the physically
+impossible overscale rejections collapsed. The Tribunal was not touched.
+
+## 11. What this repository is not
 
 - Not a controller. No setpoints, no dispatch, no closed loop.
 - Not a financial guarantee. Investor/Government mode is a probabilistic planning view.
@@ -313,7 +353,7 @@ Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
   `baselines.py`, `synthetic.py`) and their run artefacts were superseded by v3 and
   removed; the history remains in git.
 
-## 11. Changelog (improvement programme W1 → W7)
+## 12. Changelog (improvement programme W1 → W7)
 
 The operational default is the **versioned NumPy clearness SSM**
 (`chariot/model.py`). Every model change bumps the model version, and a stage
@@ -323,7 +363,7 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 | stage | what landed | model version | gate |
 | --- | --- | --- | --- |
 | W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
-| W2 | clear-sky upgrade | — | pending |
+| W2 | clear-sky upgrade: one documented reference for both years (`chariot/clearsky.py`, `chariot_clearsky_v2.0_fixed_plane`) | unchanged (`hcbsswm_v3.0_empirical_bayes_*`), reference versioned separately | PASS — daylight kt>1.05 on 2022 val 22.45 % → 1.78 %, validation MAE +0.8 %, survival 0.944 → 0.956 |
 | W3 | ops bias / hour-elevation calibration | — | pending |
 | W4 | constrained residual chamber | — | pending |
 | W5 | baselines and metric honesty | — | pending |
@@ -332,7 +372,7 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 
 Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
 
-## 12. License / attribution
+## 13. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.

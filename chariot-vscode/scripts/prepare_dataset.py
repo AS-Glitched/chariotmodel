@@ -185,6 +185,63 @@ def prepare_year2022_2023(args: argparse.Namespace) -> int:
     f23["split_year"] = 2023
     test_2023 = f23.reset_index(drop=True)
 
+    # -- the clear-sky reference (W2) -------------------------------------
+    # "export" keeps the reference the DKASC export shipped (the 2022 and
+    # the 2023 exports do not share it -- that is the defect W2 repairs).
+    # "chariot_v2" rebuilds one documented reference for both years, with
+    # the geometry inferred from the *training* year's measured POA.
+    clear_sky_info: dict[str, Any] = {"source": args.clearsky}
+    if args.clearsky == "chariot_v2":
+        from chariot.clearsky import (  # noqa: PLC0415
+            CLEAR_SKY_VERSION,
+            clearness_diagnostics,
+            compute_clear_sky,
+            infer_fixed_plane_geometry,
+            tracker_reference_rmse,
+        )
+
+        inference = infer_fixed_plane_geometry(train_2022)
+        geometry = inference["geometry"]
+        tracker_rmse = tracker_reference_rmse(train_2022, geometry)
+        # The clearness diagnostics of the *exported* reference, captured
+        # before it is replaced.
+        before = {
+            name: clearness_diagnostics(
+                frame["solar_w"].to_numpy(dtype=float),
+                frame["clear_sky_w"].to_numpy(dtype=float),
+            )
+            for name, frame in (
+                ("train_2022", train_2022),
+                ("validate_2022", validate_2022),
+                ("test_2023", test_2023),
+            )
+        }
+        for frame in (train_2022, validate_2022, test_2023):
+            reference = compute_clear_sky(
+                frame, geometry, rated_pv_w=args.rated_pv_w
+            )
+            frame["clear_sky_poa_w_m2"] = reference["clear_sky_poa_w_m2"].to_numpy()
+            frame["clear_sky_w"] = reference["clear_sky_w"].to_numpy()
+            frame["kt"] = reference["kt"].to_numpy()
+            frame["clear_sky_version"] = CLEAR_SKY_VERSION
+        clear_sky_info = {
+            "source": "chariot_v2",
+            "clear_sky_version": CLEAR_SKY_VERSION,
+            "geometry": geometry.as_dict(),
+            "geometry_inference": {
+                "target": "measured poa_w_m2 on the 2022 train slice",
+                "best": inference["best"],
+                "grid_top": inference["grid"],
+            },
+            "tracker_reference_rmse_w_m2": tracker_rmse,
+            "clearness_before": before,
+            "note": (
+                "The array layout is not in the export, so no tracker mix is "
+                "invented: the documented equivalent is the single fixed plane "
+                "that best reproduces the measured POA of the training year."
+            ),
+        }
+
     slices = {
         "train_2022": train_2022,
         "validate_2022": validate_2022,
@@ -245,6 +302,7 @@ def prepare_year2022_2023(args: argparse.Namespace) -> int:
         "columns": list(combined.columns),
         "selection_split": "validate_2022",
         "test_split_usage": "report only",
+        "clear_sky": clear_sky_info,
     }
     manifest_path = data_dir / "dka_alice_springs_2022_2023.manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -308,6 +366,18 @@ def main() -> int:
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--data-dir", default=str(PROTOCOL_DATA_DIR))
     parser.add_argument("--rated-pv-w", type=float, default=220_000.0)
+    parser.add_argument(
+        "--clearsky",
+        default="chariot_v2",
+        choices=["export", "chariot_v2"],
+        help=(
+            "clear-sky reference: 'chariot_v2' (default, promoted in W2) rebuilds "
+            "one documented reference for both years, with the geometry inferred "
+            "from the training year's measured POA; 'export' keeps the reference "
+            "the DKASC export shipped (the 2022 and 2023 exports do not share it) "
+            "and reproduces the W1 baseline"
+        ),
+    )
     parser.add_argument(
         "--train-frac", type=float, default=0.60, help="train fraction (default 0.60)"
     )
