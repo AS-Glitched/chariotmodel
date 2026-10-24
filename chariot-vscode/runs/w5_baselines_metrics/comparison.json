@@ -1,0 +1,159 @@
+{
+  "stage_id": "W5",
+  "title": "Baselines and metric honesty",
+  "protocol": {
+    "name": "year2022_2023",
+    "train": "first 60 % of the 2022 window (fit only)",
+    "validate": "remaining 40 % of the 2022 window (selection only)",
+    "test": "the whole 2023 window (report only \u2014 never fitted, never selected on)",
+    "split_policy": "pre_assigned (upstream protocol)",
+    "model note": "no model change: this stage fixes the *reporting* so every claim names the baseline it beats"
+  },
+  "data": {
+    "content_hashes": {
+      "dataset": "3bf7e46e99e2673ab9fb206ca3d17e8badb3d9ca2ed363d0d5d88eee5e42719d"
+    },
+    "split_boundaries": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:00:00+00:00",
+        "count": 33827
+      },
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 20263
+      },
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "split_row_counts": {
+      "test": 33827,
+      "train": 20263,
+      "validate": 14000
+    }
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_d5f67dc1eb",
+    "tribunal_policy": "tribunal_v3.0",
+    "residual_version": "resid_solar_w_0033adc063",
+    "selected_w": 0.0
+  },
+  "metrics": {
+    "validate_2022 (selection) \u2014 final configuration": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": 9.815195737636627,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    },
+    "test_2023 (report only) \u2014 final configuration": {
+      "mae_mean": 17259.708455442706,
+      "rmse_mean": 23712.568674995095,
+      "bias_mean": 5605.821767890625,
+      "coverage_mean": 0.8794270833333332,
+      "energy_error_wh_mean": 283309.38169312506,
+      "daylight_mae_pct_of_rated_mean": 8.274332468054961,
+      "n_windows": 40,
+      "survival_rate": 0.93575,
+      "min_survival_rate": 0.415,
+      "total_rejected": 514,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 478,
+        "SOLAR_OVERSCALE": 34,
+        "GRID_IMPORT_LIMIT": 3,
+        "GRID_EXPORT_LIMIT": 2
+      }
+    }
+  },
+  "baselines": {
+    "validate_2022 :: solar_w::persistence_horizon_matched": {
+      "mae_mean": 69867.29948528645,
+      "rmse_mean": 85382.2837594694,
+      "bias_mean": 9710.406500807292,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: solar_w::persistence_1step": {
+      "mae_mean": 9323.266032500003,
+      "rmse_mean": 9323.266032500003,
+      "bias_mean": -1043.3119524999988,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: solar_w::clear_sky_naive": {
+      "mae_mean": 41560.10624703309,
+      "rmse_mean": 49825.3323416747,
+      "bias_mean": 41559.997884600016,
+      "energy_error_wh_mean": 997439.9492304003
+    },
+    "test_2023 :: solar_w::persistence_horizon_matched": {
+      "mae_mean": 68865.8841776823,
+      "rmse_mean": 83263.90639826705,
+      "bias_mean": 767.032881171874,
+      "energy_error_wh_mean": null
+    },
+    "test_2023 :: solar_w::persistence_1step": {
+      "mae_mean": 14116.453872499998,
+      "rmse_mean": 14116.453872499998,
+      "bias_mean": -447.00151250000164,
+      "energy_error_wh_mean": null
+    },
+    "test_2023 :: solar_w::clear_sky_naive": {
+      "mae_mean": 38901.84744495513,
+      "rmse_mean": 46542.3815183559,
+      "bias_mean": 38827.34492429584,
+      "energy_error_wh_mean": 931856.2781831002
+    }
+  },
+  "gates": [
+    {
+      "name": "GATE: every window summary names its baselines",
+      "target": "persistence_1step, persistence_horizon_matched, clear_sky_naive (MAE + energy error), diurnal climatology",
+      "observed": "persistence at one step (15 min) and at the horizon, the clear-sky naive baseline with its energy error, and the training-hour climatology are all reported on every window",
+      "pass": true
+    },
+    {
+      "name": "GATE: the primary metrics are reported",
+      "target": "daylight % of rated, energy error, MAE/RMSE/bias, P10-P90 coverage, tribunal survival, rejection counts",
+      "observed": "the daylight MAE as a percentage of the rated DC power is 9.82 % (2022 validation); the energy error, MAE, RMSE, bias, coverage, survival and the rejection counts are reported next to it",
+      "pass": true
+    },
+    {
+      "name": "GATE: 'beats persistence' names which persistence",
+      "target": "no unqualified persistence claim",
+      "observed": "the model beats the *horizon-matched* persistence by 3.3x on the 2022 validation window (21,312 W vs 69,867 W) and by 4.0x on the 2023 window (17,260 W vs 68,866 W). The 15-minute persistence is reported separately (9,323 W on 2022 validation, 14,116 W on 2023) because it is scored on a single step and is therefore not comparable with a 96-step window MAE",
+      "pass": true,
+      "note": "The two persistences are very different numbers, and an unqualified 'beats persistence' claim would be misleading either way."
+    }
+  ],
+  "claims": {
+    "allowed": [
+      "The model beats the horizon-matched persistence by 3.3x (2022 validation) and 4.0x (2023), with the qualifier named.",
+      "The 15-minute persistence is reported on its own row, with the note that it is a single-step score.",
+      "The clear-sky naive baseline is reported with its MAE and its energy error.",
+      "The daylight error is reported as a percentage of the rated DC power."
+    ],
+    "forbidden": [
+      "Any unqualified 'beats persistence' claim.",
+      "Any claim about the load, SOC or grid channels as validated skill."
+    ]
+  },
+  "notes": [
+    "The baseline table is now per target and per model, so the solar and the load baselines can never be confused.",
+    "The clearance of the old 'persistence_origin' name: the horizon-matched persistence and the 15-minute persistence are separate rows."
+  ]
+}

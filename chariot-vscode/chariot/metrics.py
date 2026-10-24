@@ -56,6 +56,34 @@ def energy_error_wh(actual: np.ndarray, predicted: np.ndarray, dt_h: float) -> f
     return float(abs(np.sum(p[mask]) - np.sum(a[mask])) * dt_h)
 
 
+def daylight_mae_percent_of_rated(
+    actual: np.ndarray,
+    predicted: np.ndarray,
+    *,
+    clear_sky: np.ndarray | None = None,
+    rated_pv_w: float | None = None,
+    min_clear_sky_w: float = 1000.0,
+) -> float:
+    """The daylight error as a percentage of the rated DC power.
+
+    This is the DSM-style shape: the error is only meaningful against the
+    size of the plant, and only in daylight.  A night-time step carries no
+    signal, so it is excluded.  ``NaN`` when the site has no rating.
+    """
+    if not rated_pv_w or rated_pv_w <= 0:
+        return float("nan")
+    a = np.asarray(actual, dtype=float)
+    p = np.asarray(predicted, dtype=float)
+    mask = np.isfinite(a) & np.isfinite(p)
+    if clear_sky is not None:
+        cs = np.asarray(clear_sky, dtype=float)
+        if cs.size == mask.size:
+            mask = mask & (cs > min_clear_sky_w)
+    if not mask.any():
+        return float("nan")
+    return float(np.mean(np.abs(p[mask] - a[mask])) / float(rated_pv_w) * 100.0)
+
+
 def score_window(
     actual: pd.DataFrame,
     forecast: dict[str, Any],
@@ -102,13 +130,28 @@ def baseline_scoreboard(
         else np.full(n, np.nan)
     )
 
+    # (1) persistence at the horizon: the last observed value carried across
+    #     the whole horizon.  This is the "easy" persistence.
     rows.append(
         {
             "target": "solar_w",
-            "model": "persistence_origin",
+            "model": "persistence_horizon_matched",
+            "horizon_steps": n,
             **point_metrics(solar_truth, np.full(n, last_solar)),
         }
     )
+    # (2) persistence at one step (15 minutes): the same forecast, but scored
+    #     on the first step only.  A claim of "beats persistence" must say
+    #     which of the two it means.
+    if n:
+        rows.append(
+            {
+                "target": "solar_w",
+                "model": "persistence_1step",
+                "horizon_steps": 1,
+                **point_metrics(solar_truth[:1], np.full(1, last_solar)),
+            }
+        )
     # The materialised dataset carries the clear-sky reference as
     # ``clear_sky_power_w``; the raw telemetry calls it ``clear_sky_w``.
     clear_col = next(
@@ -121,6 +164,7 @@ def baseline_scoreboard(
             {
                 "target": "solar_w",
                 "model": "clear_sky_naive",
+                "horizon_steps": n,
                 **point_metrics(solar_truth, clear),
                 "energy_error_wh": energy_error_wh(solar_truth, clear, dt_h),
             }
@@ -132,6 +176,7 @@ def baseline_scoreboard(
             {
                 "target": "solar_w",
                 "model": "train_hour_climatology",
+                "horizon_steps": n,
                 **point_metrics(solar_truth, clim),
                 "energy_error_wh": energy_error_wh(solar_truth, clim, dt_h),
             }
@@ -164,4 +209,8 @@ def aggregate_windows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             ),
             "n_windows": len(entries),
         }
+        pct = [e.get("daylight_mae_pct_of_rated") for e in entries]
+        pct = [v for v in pct if v is not None and np.isfinite(v)]
+        if pct:
+            out[signal]["daylight_mae_pct_of_rated_mean"] = float(np.mean(pct))
     return out

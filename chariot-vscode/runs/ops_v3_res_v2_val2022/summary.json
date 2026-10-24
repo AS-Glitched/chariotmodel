@@ -1,0 +1,49 @@
+{
+  "n_windows": 40,
+  "mean_survival_rate": 0.9561250000000001,
+  "min_survival_rate": 0.93,
+  "max_survival_rate": 0.98,
+  "total_proposed": 8000,
+  "total_rejected": 351,
+  "constraint_counts": {
+    "SOLAR_RAMP_LIMIT": 326,
+    "SOLAR_OVERSCALE": 21,
+    "GRID_IMPORT_LIMIT": 5,
+    "GRID_EXPORT_LIMIT": 3
+  },
+  "status_counts": {
+    "eligible_for_human_review": 32,
+    "reduced_confidence": 8
+  },
+  "mean_confidence": 0.44488199343702395,
+  "mean_uncertainty": 0.5345973709986996,
+  "evaluation": {
+    "solar_w": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "n_windows": 40,
+      "daylight_mae_pct_of_rated_mean": 9.815195737636627
+    }
+  },
+  "baselines": {
+    "solar_w::persistence_horizon_matched": {
+      "mae_mean": 69867.29948528645,
+      "rmse_mean": 85382.2837594694,
+      "bias_mean": 9710.406500807292
+    },
+    "solar_w::persistence_1step": {
+      "mae_mean": 9323.266032500003,
+      "rmse_mean": 9323.266032500003,
+      "bias_mean": -1043.3119524999988
+    },
+    "solar_w::clear_sky_naive": {
+      "mae_mean": 41560.10624703309,
+      "rmse_mean": 49825.3323416747,
+      "bias_mean": 41559.997884600016,
+      "energy_error_wh_mean": 997439.9492304003
+    }
+  }
+}

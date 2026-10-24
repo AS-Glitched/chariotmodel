@@ -66,6 +66,24 @@ def main() -> int:
         choices=["test", "validate", "train"],
         help="split the rolling-origin evaluation windows are drawn from",
     )
+    parser.add_argument(
+        "--clearness-calibration",
+        action="store_true",
+        help=(
+            "enable the W3 clearness calibration: a bin-wise level correction "
+            "on the clearness ratio, fitted on the train split and selected on "
+            "the validation split"
+        ),
+    )
+    parser.add_argument(
+        "--hybrid-advisory",
+        action="store_true",
+        help=(
+            "publish the SOC / grid event probabilities even when the site has "
+            "no measured load or state of charge (default: solar-only mode, "
+            "they are nulled and flagged as assumed)"
+        ),
+    )
     parser.add_argument("--start", default=None, help="analysis window start (ISO)")
     parser.add_argument("--end", default=None, help="analysis window end (ISO, exclusive)")
     parser.add_argument(
@@ -94,6 +112,8 @@ def main() -> int:
         keep_parquet=args.keep_parquet,
         honour_split=args.honour_split,
         evaluate_split=args.evaluate_split,
+        clearness_calibration=args.clearness_calibration,
+        solar_only_advisory=not args.hybrid_advisory,
     )
     manifest = run(config)
     print(json.dumps(manifest, indent=2, default=str))

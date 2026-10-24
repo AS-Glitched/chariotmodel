@@ -48,14 +48,43 @@ def _event_probability(values: np.ndarray, predicate) -> float:
     return float(np.mean(predicate(values)))
 
 
+#: The event keys that describe the *hybrid* side of the plant.  They are
+#: only meaningful when the load and the state of charge are measured.
+HYBRID_EVENT_KEYS: tuple[str, ...] = (
+    "p_soc_below_20_within_horizon",
+    "p_soc_above_90_within_horizon",
+    "p_grid_import_limit_exceeded",
+    "p_grid_export_limit_exceeded",
+)
+
+
+def hybrid_channels_measured(ctx: Any) -> bool:
+    """Whether the site has *measured* load / state of charge.
+
+    A declared site card (a load profile, a battery size, a starting SOC)
+    is an engineering assumption, not a measurement.  On a solar-only site
+    the hybrid event probabilities would be numbers derived from assumptions,
+    so they must not be published as if they were observations.
+    """
+    meta = (getattr(ctx, "metadata", {}) or {}) if ctx is not None else {}
+    return bool(meta.get("load_observed")) and bool(meta.get("soc_observed"))
+
+
 def build_events(
     batch: ScenarioBatch,
     retained_idx: Sequence[int],
     *,
     ctx: Any = None,
     horizon_steps: int | None = None,
+    solar_only: bool = True,
 ) -> dict[str, Any]:
-    """Empirical event probabilities computed on the retained set."""
+    """Empirical event probabilities computed on the retained set.
+
+    In solar-only mode the hybrid (SOC / grid) event probabilities are
+    nulled and the payload is marked ``hybrid_assumed``: the numbers exist
+    in the simulation, but they come from a declared site card, not from a
+    measurement, so they are not published as skill.
+    """
     idx = np.asarray(list(retained_idx), dtype=int)
     if idx.size == 0:
         return {
@@ -97,6 +126,19 @@ def build_events(
             solar, lambda v: np.max(v, axis=1) > float(ac_rating)
         )
         events["certified_ac_pv_w"] = float(ac_rating)
+
+    if solar_only and not hybrid_channels_measured(ctx):
+        # The hybrid probabilities are assumption-driven on this site: they
+        # are removed from the payload and the payload says so.
+        for key in HYBRID_EVENT_KEYS:
+            if key in events:
+                events[key] = None
+        events["hybrid_assumed"] = True
+        events["hybrid_note"] = (
+            "SOC and grid event probabilities are nulled: this site has no "
+            "measured load or state of charge, so the declared site card is an "
+            "assumption and not an observation."
+        )
     return events
 
 
@@ -112,6 +154,7 @@ def build_forecast(
     horizon_steps: int | None = None,
     baselines: list[dict[str, Any]] | None = None,
     rejection_sample: list[dict[str, Any]] | None = None,
+    solar_only: bool = True,
 ) -> dict[str, Any]:
     """Build one role-mode advisory payload."""
     if role_mode not in ROLE_MODES:
@@ -173,7 +216,9 @@ def build_forecast(
     soc = np.asarray(batch.soc_percent[idx], dtype=float)[:, :steps]
     grid = np.asarray(batch.grid_w[idx], dtype=float)[:, :steps]
 
-    events = build_events(batch, idx, ctx=ctx, horizon_steps=steps)
+    events = build_events(
+        batch, idx, ctx=ctx, horizon_steps=steps, solar_only=solar_only
+    )
 
     payload: dict[str, Any] = {
         **common,
@@ -252,6 +297,7 @@ def build_all(
     horizon_steps: int | None = None,
     baselines: list[dict[str, Any]] | None = None,
     rejection_sample: list[dict[str, Any]] | None = None,
+    solar_only: bool = True,
 ) -> dict[str, dict[str, Any]]:
     """Build all three role-mode advisories from one certified batch."""
     return {
@@ -265,6 +311,7 @@ def build_all(
             horizon_steps=horizon_steps,
             baselines=baselines,
             rejection_sample=rejection_sample,
+            solar_only=solar_only,
         )
         for role in ROLE_MODES
     }

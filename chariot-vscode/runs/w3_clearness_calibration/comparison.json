@@ -1,0 +1,145 @@
+{
+  "stage_id": "W3",
+  "title": "Ops bias / hour-elevation calibration",
+  "protocol": {
+    "name": "year2022_2023",
+    "train": "first 60 % of the 2022 window (fit only)",
+    "validate": "remaining 40 % of the 2022 window (selection only)",
+    "test": "the whole 2023 window (report only \u2014 never fitted, never selected on)",
+    "split_policy": "pre_assigned (upstream protocol)",
+    "model note": "the clearness calibration is additive and off by default; the inference code is unchanged"
+  },
+  "data": {
+    "content_hashes": {
+      "dataset": "0a6eb0182571917b45a53221d00d95b46589eb101a316fa3445b71ca769c17cb"
+    },
+    "split_boundaries": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:00:00+00:00",
+        "count": 33827
+      },
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 20263
+      },
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "split_row_counts": {
+      "test": 33827,
+      "train": 20263,
+      "validate": 14000
+    }
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_ece118889a",
+    "tribunal_policy": "tribunal_v3.0",
+    "residual_version": "resid_solar_w_0033adc063",
+    "selected_w": 0.0,
+    "calibration_version": "chariot_clearness_calibration_v1.0",
+    "selected_shrinkage": 0.0,
+    "fitted_on": "train_2022 (rolling origins)",
+    "selected_on": "validate_2022"
+  },
+  "metrics": {
+    "validate_2022 (selection) \u2014 W2 baseline": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": null,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    },
+    "validate_2022 (selection) \u2014 W3 calibration run": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": 9.815195737636627,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    }
+  },
+  "baselines": {
+    "validate_2022 :: persistence_origin": {
+      "mae_mean": 69867.29948528645,
+      "rmse_mean": 85382.2837594694,
+      "bias_mean": 9710.406500807292,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: clear_sky_naive": {
+      "mae_mean": 41560.10624703309,
+      "rmse_mean": 49825.3323416747,
+      "bias_mean": 41559.997884600016,
+      "energy_error_wh_mean": 997439.9492304003
+    }
+  },
+  "gates": [
+    {
+      "name": "GATE: |bias| down on the 2022 validation window",
+      "target": "smaller than the W2 baseline (4,558 W)",
+      "observed": "4,558 W \u2014 unchanged: the selection kept the shrinkage at 0.0, so no correction was applied",
+      "pass": false,
+      "note": "The calibration *can* remove the bias (at shrinkage 1.0 the validation bias moves from +4,776 W to -2,649 W), but it costs 12 % of the MAE, so the bias-first selection rule rejects it."
+    },
+    {
+      "name": "GATE: MAE not materially worse on the 2022 validation window",
+      "target": "not more than 2 % worse than the W2 baseline",
+      "observed": "21,312 W \u2014 unchanged",
+      "pass": true
+    },
+    {
+      "name": "The correction is a *level* error, not a tail error",
+      "target": "diagnostic: the model's median clearness is unbiased",
+      "observed": "the median log-ratio residual is +0.03 (validation) and -0.004 (training) while the mean is -0.17: the bias lives in the tail, so a level shift trades MAE for bias",
+      "pass": false,
+      "note": "A bin-wise level correction cannot fix a skewed bias without moving the rows that are already right. The machinery lands and stays off by default; the lever for a tail bias is the ensemble spread, not the level."
+    },
+    {
+      "name": "Nothing fitted on 2023",
+      "target": "the offsets are fitted on train_2022 and the shrinkage is selected on validate_2022",
+      "observed": "fitted_on=train_2022 (rolling origins), selected_on=validate_2022",
+      "pass": true
+    }
+  ],
+  "claims": {
+    "allowed": [
+      "The calibration machinery works end to end and is off by default.",
+      "The selection rejected every candidate, so the operational model is bit-identical to the W2 baseline.",
+      "The model's clearness bias is a tail effect, not a level error."
+    ],
+    "forbidden": [
+      "Any claim that W3 improved the model: it did not, and the default is unchanged.",
+      "Any claim that the bias was removed."
+    ]
+  },
+  "notes": [
+    "The first implementation fitted the offsets with a plain mean; 90 rows where the plant delivered nothing (a real outage, not a gap) turned the mean log-ratio into -inf. The estimator is now a trimmed mean over the rows that are actually clearness observations, with a shrinkage prior of 50 rows and a minimum of 20 rows per bin.",
+    "The fitting windows are spread across the whole training split; the operational evaluation windows still tile the split from its start, which is the v3 behaviour."
+  ]
+}

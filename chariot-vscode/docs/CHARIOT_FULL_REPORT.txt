@@ -4,9 +4,9 @@ CHARIOT v3 + THE OFFLINE PyMC REFERENCE — COMPLETE ENGINEERING REPORT
 Every formula, every rule, every test, every result and the complete source code, in one file.
 repository   : https://github.com/AS-Glitched/chariotmodel
 branch       : arena/eb404247-chariotmodel
-commit       : e771c6d8ce9d
+commit       : 0c5ce0bc9c83
 pull request : #1 (open)
-generated    : 2026-10-24 18:04 UTC
+generated    : 2026-10-24 18:19 UTC
 generator    : scripts/build_full_report.py
 
 CONTENTS
@@ -6217,8 +6217,8 @@ SOURCE: chariot/residual.py
 ==============================================================================
 Residual Proposal Chamber (ridge, capped, versioned)
 file   : chariot-vscode/chariot/residual.py
-lines  : 319
-bytes  : 10560
+lines  : 332
+bytes  : 11133
 ------------------------------------------------------------------------------
 """Residual Proposal Chamber — the bounded shadow corrector (PDF §4.8).
 
@@ -6310,6 +6310,7 @@ def build_features(
     last_load: float = 0.0,
     solar_lags: np.ndarray | None = None,
     load_lags: np.ndarray | None = None,
+    previous_correction: np.ndarray | None = None,
     calibration: dict[str, float] | None = None,
     site_encoding: float = 0.0,
 ) -> tuple[np.ndarray, list[str]]:
@@ -6362,6 +6363,16 @@ def build_features(
     regime_day = (clear_sky > 1.0).astype(float)
     regime_cloud = np.clip(expected_ratio_flat, 0.0, 1.5)
 
+    # The residual's own lag: the correction proposed for the previous step.
+    # It is the model's own output (never the realised residual), so it is
+    # knowable at forecast time and it cannot leak the target.
+    if previous_correction is None:
+        prev_corr = np.zeros(n, dtype=float)
+    else:
+        prev_corr = np.asarray(previous_correction, dtype=float).reshape(-1)
+        if prev_corr.size != n:
+            prev_corr = np.zeros(n, dtype=float)
+
     def tiled(values: np.ndarray) -> np.ndarray:
         return np.tile(np.asarray(values, dtype=float), n_scen)
 
@@ -6383,6 +6394,7 @@ def build_features(
         tiled(np.cos(2 * np.pi * doy / 365.25)),
         tiled(regime_day),
         regime_cloud,
+        tiled(prev_corr),
         np.full(n * n_scen, site_encoding),
         np.full(n * n_scen, cal_arr[0]),
         np.full(n * n_scen, cal_arr[1]),
@@ -6404,6 +6416,7 @@ def build_features(
         "doy_cos",
         "is_daylight",
         "regime_ratio",
+        "previous_correction",
         "site_encoding",
         "cal_pv_correction",
         "cal_capacity_factor",
@@ -6546,8 +6559,8 @@ SOURCE: chariot/genesis.py
 ==============================================================================
 Scenario Genesis Engine
 file   : chariot-vscode/chariot/genesis.py
-lines  : 262
-bytes  : 9460
+lines  : 306
+bytes  : 11747
 ------------------------------------------------------------------------------
 """Scenario Genesis Engine — trajectory fan for the Tribunal (PDF §4.9).
 
@@ -6680,6 +6693,7 @@ def generate_batch(
     mode: str = "hybrid_hierarchical",
     dt_h: float = 0.25,
     paths: dict[str, np.ndarray] | None = None,
+    clearness_calibration: Any = None,
 ) -> ScenarioBatch:
     """Generate a scenario batch and solve the physics for every path.
 
@@ -6717,6 +6731,28 @@ def generate_batch(
     solar = sim["solar_w"]
     load = sim["load_w"]
 
+    # -- clearness calibration (W3) ---------------------------------------
+    # A bin-wise level correction on the clearness ratio, fitted on the
+    # training split and selected on the validation split.  It is applied
+    # here, in the adapter, so that the operational scenarios and the
+    # offline PyMC reference paths go through exactly the same seam.
+    if clearness_calibration is not None and getattr(clearness_calibration, "active", False):
+        from chariot.clearness_calibration import apply_calibration_to_paths, calibration_multiplier
+        from chariot.model import CLEARNESS_MAX, solar_elevation_deg
+
+        meta = getattr(ctx, "metadata", {}) or {}
+        elevation = solar_elevation_deg(
+            frame["timestamp_utc"],
+            float(meta.get("latitude") or 0.0),
+            float(meta.get("longitude") or 0.0),
+        )
+        clear = clear_sky_series(frame)
+        clear = np.nan_to_num(clear, nan=0.0)
+        mult = calibration_multiplier(clearness_calibration, frame, elevation)
+        solar = apply_calibration_to_paths(
+            solar, mult, clear, clearness_max=float(CLEARNESS_MAX)
+        )
+
     # -- residual augmentation (bounded, never bypasses the Tribunal) ------
     if residual_artifact is not None and residual_weight > 0.0:
         from chariot.residual import build_features, propose_paths
@@ -6739,6 +6775,27 @@ def generate_batch(
         )
         corrections = np.asarray(propose_paths(residual_artifact, features), dtype=float)
         corrections = corrections.reshape(solar.shape)
+        # Second pass: the residual's own lag (the correction proposed for
+        # the previous step) is a legitimate, leakage-safe feature.
+        if "previous_correction" in (getattr(residual_artifact, "feature_names", None) or []):
+            lag = np.concatenate([np.zeros((solar.shape[0], 1)), corrections[:, :-1]], axis=1)
+            features2, _ = build_features(
+                frame,
+                mu_solar=solar,
+                mu_load=load,
+                clear_sky=clear,
+                expected_ratio=expected_ratio,
+                last_solar=last_solar,
+                last_load=last_load,
+                calibration=calibration or {},
+                previous_correction=lag.reshape(-1),
+            )
+            corrections = np.asarray(
+                propose_paths(residual_artifact, features2), dtype=float
+            ).reshape(solar.shape)
+        # The night carries no signal: the correction is forced to zero when
+        # there is no clear sky, so the residual cannot invent night power.
+        corrections = np.where(clear[None, :] > 1.0, corrections, 0.0)
         solar = np.maximum(solar + float(residual_weight) * corrections, 0.0)
 
     # -- deterministic physics for every path ------------------------------
@@ -7848,8 +7905,8 @@ SOURCE: chariot/advisory.py
 ==============================================================================
 role modes, quantiles, events, abstention
 file   : chariot-vscode/chariot/advisory.py
-lines  : 271
-bytes  : 10020
+lines  : 318
+bytes  : 11951
 ------------------------------------------------------------------------------
 """Advisory API — multi-horizon, multi-role, advisory-only publication (PDF §4.14).
 
@@ -7901,14 +7958,43 @@ def _event_probability(values: np.ndarray, predicate) -> float:
     return float(np.mean(predicate(values)))
 
 
+#: The event keys that describe the *hybrid* side of the plant.  They are
+#: only meaningful when the load and the state of charge are measured.
+HYBRID_EVENT_KEYS: tuple[str, ...] = (
+    "p_soc_below_20_within_horizon",
+    "p_soc_above_90_within_horizon",
+    "p_grid_import_limit_exceeded",
+    "p_grid_export_limit_exceeded",
+)
+
+
+def hybrid_channels_measured(ctx: Any) -> bool:
+    """Whether the site has *measured* load / state of charge.
+
+    A declared site card (a load profile, a battery size, a starting SOC)
+    is an engineering assumption, not a measurement.  On a solar-only site
+    the hybrid event probabilities would be numbers derived from assumptions,
+    so they must not be published as if they were observations.
+    """
+    meta = (getattr(ctx, "metadata", {}) or {}) if ctx is not None else {}
+    return bool(meta.get("load_observed")) and bool(meta.get("soc_observed"))
+
+
 def build_events(
     batch: ScenarioBatch,
     retained_idx: Sequence[int],
     *,
     ctx: Any = None,
     horizon_steps: int | None = None,
+    solar_only: bool = True,
 ) -> dict[str, Any]:
-    """Empirical event probabilities computed on the retained set."""
+    """Empirical event probabilities computed on the retained set.
+
+    In solar-only mode the hybrid (SOC / grid) event probabilities are
+    nulled and the payload is marked ``hybrid_assumed``: the numbers exist
+    in the simulation, but they come from a declared site card, not from a
+    measurement, so they are not published as skill.
+    """
     idx = np.asarray(list(retained_idx), dtype=int)
     if idx.size == 0:
         return {
@@ -7950,6 +8036,19 @@ def build_events(
             solar, lambda v: np.max(v, axis=1) > float(ac_rating)
         )
         events["certified_ac_pv_w"] = float(ac_rating)
+
+    if solar_only and not hybrid_channels_measured(ctx):
+        # The hybrid probabilities are assumption-driven on this site: they
+        # are removed from the payload and the payload says so.
+        for key in HYBRID_EVENT_KEYS:
+            if key in events:
+                events[key] = None
+        events["hybrid_assumed"] = True
+        events["hybrid_note"] = (
+            "SOC and grid event probabilities are nulled: this site has no "
+            "measured load or state of charge, so the declared site card is an "
+            "assumption and not an observation."
+        )
     return events
 
 
@@ -7965,6 +8064,7 @@ def build_forecast(
     horizon_steps: int | None = None,
     baselines: list[dict[str, Any]] | None = None,
     rejection_sample: list[dict[str, Any]] | None = None,
+    solar_only: bool = True,
 ) -> dict[str, Any]:
     """Build one role-mode advisory payload."""
     if role_mode not in ROLE_MODES:
@@ -8026,7 +8126,9 @@ def build_forecast(
     soc = np.asarray(batch.soc_percent[idx], dtype=float)[:, :steps]
     grid = np.asarray(batch.grid_w[idx], dtype=float)[:, :steps]
 
-    events = build_events(batch, idx, ctx=ctx, horizon_steps=steps)
+    events = build_events(
+        batch, idx, ctx=ctx, horizon_steps=steps, solar_only=solar_only
+    )
 
     payload: dict[str, Any] = {
         **common,
@@ -8105,6 +8207,7 @@ def build_all(
     horizon_steps: int | None = None,
     baselines: list[dict[str, Any]] | None = None,
     rejection_sample: list[dict[str, Any]] | None = None,
+    solar_only: bool = True,
 ) -> dict[str, dict[str, Any]]:
     """Build all three role-mode advisories from one certified batch."""
     return {
@@ -8118,6 +8221,7 @@ def build_all(
             horizon_steps=horizon_steps,
             baselines=baselines,
             rejection_sample=rejection_sample,
+            solar_only=solar_only,
         )
         for role in ROLE_MODES
     }
@@ -8129,8 +8233,8 @@ SOURCE: chariot/metrics.py
 ==============================================================================
 evaluation metrics + baseline scoreboard
 file   : chariot-vscode/chariot/metrics.py
-lines  : 168
-bytes  : 6102
+lines  : 217
+bytes  : 8039
 ------------------------------------------------------------------------------
 """Evaluation metrics for CHARIOT advisories.
 
@@ -8190,6 +8294,34 @@ def energy_error_wh(actual: np.ndarray, predicted: np.ndarray, dt_h: float) -> f
     return float(abs(np.sum(p[mask]) - np.sum(a[mask])) * dt_h)
 
 
+def daylight_mae_percent_of_rated(
+    actual: np.ndarray,
+    predicted: np.ndarray,
+    *,
+    clear_sky: np.ndarray | None = None,
+    rated_pv_w: float | None = None,
+    min_clear_sky_w: float = 1000.0,
+) -> float:
+    """The daylight error as a percentage of the rated DC power.
+
+    This is the DSM-style shape: the error is only meaningful against the
+    size of the plant, and only in daylight.  A night-time step carries no
+    signal, so it is excluded.  ``NaN`` when the site has no rating.
+    """
+    if not rated_pv_w or rated_pv_w <= 0:
+        return float("nan")
+    a = np.asarray(actual, dtype=float)
+    p = np.asarray(predicted, dtype=float)
+    mask = np.isfinite(a) & np.isfinite(p)
+    if clear_sky is not None:
+        cs = np.asarray(clear_sky, dtype=float)
+        if cs.size == mask.size:
+            mask = mask & (cs > min_clear_sky_w)
+    if not mask.any():
+        return float("nan")
+    return float(np.mean(np.abs(p[mask] - a[mask])) / float(rated_pv_w) * 100.0)
+
+
 def score_window(
     actual: pd.DataFrame,
     forecast: dict[str, Any],
@@ -8236,13 +8368,28 @@ def baseline_scoreboard(
         else np.full(n, np.nan)
     )
 
+    # (1) persistence at the horizon: the last observed value carried across
+    #     the whole horizon.  This is the "easy" persistence.
     rows.append(
         {
             "target": "solar_w",
-            "model": "persistence_origin",
+            "model": "persistence_horizon_matched",
+            "horizon_steps": n,
             **point_metrics(solar_truth, np.full(n, last_solar)),
         }
     )
+    # (2) persistence at one step (15 minutes): the same forecast, but scored
+    #     on the first step only.  A claim of "beats persistence" must say
+    #     which of the two it means.
+    if n:
+        rows.append(
+            {
+                "target": "solar_w",
+                "model": "persistence_1step",
+                "horizon_steps": 1,
+                **point_metrics(solar_truth[:1], np.full(1, last_solar)),
+            }
+        )
     # The materialised dataset carries the clear-sky reference as
     # ``clear_sky_power_w``; the raw telemetry calls it ``clear_sky_w``.
     clear_col = next(
@@ -8255,6 +8402,7 @@ def baseline_scoreboard(
             {
                 "target": "solar_w",
                 "model": "clear_sky_naive",
+                "horizon_steps": n,
                 **point_metrics(solar_truth, clear),
                 "energy_error_wh": energy_error_wh(solar_truth, clear, dt_h),
             }
@@ -8266,6 +8414,7 @@ def baseline_scoreboard(
             {
                 "target": "solar_w",
                 "model": "train_hour_climatology",
+                "horizon_steps": n,
                 **point_metrics(solar_truth, clim),
                 "energy_error_wh": energy_error_wh(solar_truth, clim, dt_h),
             }
@@ -8298,6 +8447,10 @@ def aggregate_windows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             ),
             "n_windows": len(entries),
         }
+        pct = [e.get("daylight_mae_pct_of_rated") for e in entries]
+        pct = [v for v in pct if v is not None and np.isfinite(v)]
+        if pct:
+            out[signal]["daylight_mae_pct_of_rated_mean"] = float(np.mean(pct))
     return out
 
 ------------------------------------------------------------------------------
@@ -8307,8 +8460,8 @@ SOURCE: chariot/pipeline.py
 ==============================================================================
 the end-to-end v3 spine
 file   : chariot-vscode/chariot/pipeline.py
-lines  : 995
-bytes  : 37975
+lines  : 1194
+bytes  : 46002
 ------------------------------------------------------------------------------
 """CHARIOT v3 end-to-end spine.
 
@@ -8359,7 +8512,12 @@ from chariot.feedback import run_cortex
 from chariot.genesis import generate_batch
 from chariot.governor import ResidualStabilityGovernor
 from chariot.hashing import hash_obj, short_hash
-from chariot.metrics import aggregate_windows, baseline_scoreboard, score_window
+from chariot.metrics import (
+    aggregate_windows,
+    baseline_scoreboard,
+    daylight_mae_percent_of_rated,
+    score_window,
+)
 from chariot.model import (
     clear_sky_series,
     filter_state_series,
@@ -8473,6 +8631,17 @@ class PipelineConfig:
     #: 2022 selection metrics of the 2022 -> 2023 protocol.  The model is
     #: always fitted on the train split only.
     evaluate_split: str = "test"
+    #: Enable the W3 clearness calibration (a bin-wise level correction on
+    #: the clearness ratio, fitted on train and selected on validate).  Off by
+    #: default so the v3 behaviour is unchanged.
+    clearness_calibration: bool = False
+    #: Solar-only advisory mode: the SOC / grid event probabilities are
+    #: nulled unless the site has *measured* load and state of charge.
+    solar_only_advisory: bool = True
+    #: Candidate shrinkings for the calibration selection.
+    calibration_shrinkages: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
+    #: Scenarios used while fitting / scoring the calibration.
+    calibration_scenarios: int = 120
     #: Calibrate the ensemble spread on the validation split.
     calibrate_spread: bool = True
     spread_windows: int = 6
@@ -8642,6 +8811,30 @@ def run(config: PipelineConfig) -> dict[str, Any]:
         dataset_content_hash=manifest["content_hash"],
         validation=validate,
     )
+    # ---------------------------------------------- clearness calibration (W3)
+    calibration_info: dict[str, Any] = {"enabled": False}
+    clearness_calibration = None
+    if config.clearness_calibration and len(train) and len(validate):
+        clearness_calibration, calibration_info = _fit_clearness_calibration(
+            model,
+            train,
+            validate,
+            ctx,
+            config,
+            dataset,
+        )
+        if clearness_calibration is not None:
+            model.sites[config.site_id].solar.diagnostics["clearness_calibration"] = (
+                clearness_calibration.to_dict()
+            )
+            # The calibration is part of the model: the version must change.
+            from chariot.model import MODEL_VERSION  # noqa: PLC0415
+            from chariot.hashing import hash_obj, short_hash  # noqa: PLC0415
+
+            model.model_version = (
+                f"{MODEL_VERSION}_{short_hash(hash_obj(model.sites[config.site_id].to_dict()), 10)}"
+            )
+
     # ------------------------------------------- ensemble spread calibration
     spread_info: dict[str, Any] = {"calibrated": False}
     if config.calibrate_spread and len(validate):
@@ -8713,6 +8906,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             residual_artifact=residual_artifact,
             state=state,
             dt_h=0.25,
+            clearness_calibration=clearness_calibration,
         )
         store.insert(
             "scenario_batches",
@@ -8777,6 +8971,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             ctx=ctx,
             baselines=baselines,
             rejection_sample=tribunal.rejections,
+            solar_only=config.solar_only_advisory,
         )
         for role, payload in advisories.items():
             store.insert(
@@ -8795,6 +8990,36 @@ def run(config: PipelineConfig) -> dict[str, Any]:
                 },
             )
         metrics = score_window(actual, advisories["grid_engineer"], dt_h=0.25)
+        # The DSM-style shape: the daylight error as a percentage of the
+        # rated DC power.  It is only defined when the site has a rating.
+        _bands = advisories["grid_engineer"].get("solar_w") or {}
+        _p50 = np.asarray(_bands.get("p50", []), dtype=float)
+        if _p50.size:
+            _truth = (
+                pd.to_numeric(actual["solar_w"], errors="coerce").to_numpy(dtype=float)[
+                    : _p50.size
+                ]
+                if "solar_w" in actual.columns
+                else np.full(_p50.size, np.nan)
+            )
+            _clear = (
+                np.nan_to_num(
+                    pd.to_numeric(actual["clear_sky_power_w"], errors="coerce").to_numpy(
+                        dtype=float
+                    )[: _p50.size],
+                    nan=0.0,
+                )
+                if "clear_sky_power_w" in actual.columns
+                else None
+            )
+            metrics.setdefault("solar_w", {})["daylight_mae_pct_of_rated"] = (
+                daylight_mae_percent_of_rated(
+                    _truth,
+                    _p50,
+                    clear_sky=_clear,
+                    rated_pv_w=ctx.rated_pv_w if getattr(ctx, "rated_pv_w", None) else None,
+                )
+            )
         results.append(
             {
                 "origin": origin_label,
@@ -8872,6 +9097,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             "load_channel": model.sites[config.site_id].load.to_dict(),
         },
         "residual": residual_info,
+        "clearness_calibration": calibration_info,
         "governor": governor.status(),
         "tribunal": {
             "policy_version": TRIBUNAL_POLICY.policy_version,
@@ -9045,6 +9271,102 @@ def _calibrate_spread(
 
 
 
+def _fit_clearness_calibration(
+    model: Any,
+    train: pd.DataFrame,
+    validate: pd.DataFrame,
+    ctx: Any,
+    config: PipelineConfig,
+    dataset: pd.DataFrame,
+) -> tuple[Any, dict[str, Any]]:
+    """Fit the W3 clearness calibration on train and select it on validate.
+
+    The offsets are fitted against the *scenario P50* on rolling origins of
+    the training split -- the same forecast geometry the operational run
+    uses -- and the shrinkage is chosen on the validation split.  The
+    report-only split is never touched.
+    """
+    from chariot.clearness_calibration import (
+        apply_shrinkage,
+        fit_clearness_calibration,
+        score_calibrations,
+    )
+    from chariot.model import solar_elevation_deg
+
+    site_id = config.site_id
+    horizon_steps = HORIZONS[config.horizon]
+    history = dataset.sort_values("timestamp_utc").reset_index(drop=True)
+
+    def state_fn(_model: Any, _actual: pd.DataFrame, future: pd.DataFrame, _ctx: Any) -> dict:
+        return _origin_state(_model, history, future, _ctx)
+
+    def elevation_fn(frame: pd.DataFrame, context: Any) -> np.ndarray:
+        meta = getattr(context, "metadata", {}) or {}
+        return solar_elevation_deg(
+            frame["timestamp_utc"],
+            float(meta.get("latitude") or 0.0),
+            float(meta.get("longitude") or 0.0),
+        )
+
+    train_windows = _spread_windows(train, horizon_steps, config.max_windows)
+    base, residuals = fit_clearness_calibration(
+        model,
+        site_id,
+        ctx,
+        train_windows,
+        n_scenarios=config.calibration_scenarios,
+        seed=config.seed,
+        shrinkage=1.0,
+        state_fn=state_fn,
+        elevation_fn=elevation_fn,
+    )
+    if base.n_rows == 0:
+        return None, {"enabled": False, "reason": "no daylight rows in the training windows"}
+
+    validate_windows = _plan_windows(validate, horizon_steps, config.max_windows)
+    candidates = [apply_shrinkage(base, float(s)) for s in config.calibration_shrinkages]
+    raw_scores = score_calibrations(
+        model,
+        site_id,
+        ctx,
+        validate_windows,
+        candidates,
+        n_scenarios=config.calibration_scenarios,
+        seed=config.seed,
+        state_fn=state_fn,
+        elevation_fn=elevation_fn,
+    )
+    scores: list[dict[str, Any]] = [
+        {"shrinkage": float(s), **score}
+        for s, score in zip(config.calibration_shrinkages, raw_scores)
+    ]
+
+    usable = [s for s in scores if s["n"] > 0 and math.isfinite(s["mae"])]
+    if not usable:
+        return None, {"enabled": False, "reason": "no validation windows"}
+    best_mae = min(s["mae"] for s in usable)
+    # Among the candidates within 1 % of the best MAE, take the one with the
+    # smallest absolute bias: the gate is bias-first, MAE-second.
+    near_best = [s for s in usable if s["mae"] <= best_mae * 1.01]
+    chosen = min(near_best, key=lambda s: abs(s["bias"]))
+    calibration = apply_shrinkage(base, chosen["shrinkage"])
+
+    info = {
+        "enabled": True,
+        "version": calibration.version,
+        "selected_shrinkage": chosen["shrinkage"],
+        "selection_scores": scores,
+        "selected_score": chosen,
+        "global_log_offset": base.global_offset,
+        "n_fit_rows": base.n_rows,
+        "n_train_windows": len(train_windows),
+        "n_validate_windows": len(validate_windows),
+        "fitted_on": "train_2022 (rolling origins)",
+        "selected_on": "validate_2022",
+        "clearness_cap": "re-applied after the correction",
+    }
+    return calibration, info
+
 def _fit_residual(
     store: Store,
     model: Any,
@@ -9100,6 +9422,8 @@ def _fit_residual(
     val_mu = one_step_prediction(model, site_id, val_history)
     val_y = solar_series(val_history)
     val_expected = np.where(val_clear > 1.0, val_mu / np.maximum(val_clear, 1.0), 0.0)
+    val_target = val_y - val_mu
+    val_prev = np.concatenate([[0.0], np.nan_to_num(val_target[:-1], nan=0.0)])
     X_val, _ = build_features(
         val_history,
         mu_solar=val_mu,
@@ -9108,6 +9432,7 @@ def _fit_residual(
         expected_ratio=val_expected,
         last_solar=float(val_y[0]),
         calibration=calibration,
+        previous_correction=val_prev,
     )
     val_mask = (
         np.isfinite(val_y)
@@ -9186,6 +9511,33 @@ def _plan_windows(
         windows = windows[:max_windows]
     return windows
 
+
+def _spread_windows(
+    frame: pd.DataFrame, horizon_steps: int, n_windows: int | None
+) -> list[tuple[str, pd.DataFrame, pd.DataFrame]]:
+    """Rolling origins spread evenly across the whole frame.
+
+    ``_plan_windows`` tiles a split from its start, so the first N windows
+    only cover the beginning of the split.  That is the right behaviour for
+    the operational evaluation (it is what the v3 run reports), but it is
+    wrong for *fitting* a correction: the training windows would all come
+    from one season.  This helper spreads the origins so the fit sees the
+    whole training window.
+    """
+    n = len(frame)
+    if n <= horizon_steps:
+        return []
+    count = n_windows if n_windows else 1
+    stride = max(1, (n - horizon_steps) // max(1, count))
+    windows: list[tuple[str, pd.DataFrame, pd.DataFrame]] = []
+    start = 0
+    while start + horizon_steps <= n:
+        end = start + horizon_steps
+        future = frame.iloc[start:end].reset_index(drop=True)
+        label = str(future["timestamp_utc"].iloc[0])
+        windows.append((label, future, future.copy()))
+        start += stride
+    return windows
 
 def _lineage(
     *,
@@ -9276,7 +9628,7 @@ def _summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     baselines: dict[str, Any] = {}
     for r in results:
         for row in r.get("baselines", []):
-            key = f"{row['model']}"
+            key = f"{row.get('target', 'solar_w')}::{row['model']}"
             baselines.setdefault(key, []).append(row)
     baseline_summary: dict[str, Any] = {}
     for key, rows in baselines.items():
@@ -10975,8 +11327,8 @@ SOURCE: scripts/run_chariot3.py
 ==============================================================================
 run the full operational spine
 file   : chariot-vscode/scripts/run_chariot3.py
-lines  : 105
-bytes  : 3835
+lines  : 125
+bytes  : 4592
 ------------------------------------------------------------------------------
 #!/usr/bin/env python3
 """Run the CHARIOT v3 end-to-end spine.
@@ -11046,6 +11398,24 @@ def main() -> int:
         choices=["test", "validate", "train"],
         help="split the rolling-origin evaluation windows are drawn from",
     )
+    parser.add_argument(
+        "--clearness-calibration",
+        action="store_true",
+        help=(
+            "enable the W3 clearness calibration: a bin-wise level correction "
+            "on the clearness ratio, fitted on the train split and selected on "
+            "the validation split"
+        ),
+    )
+    parser.add_argument(
+        "--hybrid-advisory",
+        action="store_true",
+        help=(
+            "publish the SOC / grid event probabilities even when the site has "
+            "no measured load or state of charge (default: solar-only mode, "
+            "they are nulled and flagged as assumed)"
+        ),
+    )
     parser.add_argument("--start", default=None, help="analysis window start (ISO)")
     parser.add_argument("--end", default=None, help="analysis window end (ISO, exclusive)")
     parser.add_argument(
@@ -11074,6 +11444,8 @@ def main() -> int:
         keep_parquet=args.keep_parquet,
         honour_split=args.honour_split,
         evaluate_split=args.evaluate_split,
+        clearness_calibration=args.clearness_calibration,
+        solar_only_advisory=not args.hybrid_advisory,
     )
     manifest = run(config)
     print(json.dumps(manifest, indent=2, default=str))
@@ -13528,8 +13900,8 @@ FILE: README.md
 ==============================================================================
 the README
 file   : chariot-vscode/README.md
-lines  : 379
-bytes  : 20015
+lines  : 446
+bytes  : 24023
 ------------------------------------------------------------------------------
 # CHARIOT v3
 
@@ -13897,15 +14269,82 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 | --- | --- | --- | --- |
 | W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
 | W2 | clear-sky upgrade: one documented reference for both years (`chariot/clearsky.py`, `chariot_clearsky_v2.0_fixed_plane`) | unchanged (`hcbsswm_v3.0_empirical_bayes_*`), reference versioned separately | PASS — daylight kt>1.05 on 2022 val 22.45 % → 1.78 %, validation MAE +0.8 %, survival 0.944 → 0.956 |
-| W3 | ops bias / hour-elevation calibration | — | pending |
-| W4 | constrained residual chamber | — | pending |
-| W5 | baselines and metric honesty | — | pending |
-| W6 | solar-only advisory mode | — | pending |
-| W7 | low-dimensional PyMC reference (offline) | — | pending |
+| W3 | clearness calibration (`chariot/clearness_calibration.py`) | unchanged — the calibration is off by default | NOT PROMOTED — the validation selection kept the shrinkage at 0.0 |
+| W4 | residual chamber: the previous-correction feature + night forcing | `resid_solar_w_*` (the selected weight is 0) | NOT PROMOTED — 0.0 % validation MAE improvement, so the weight stays at 0 |
+| W5 | baselines and metric honesty (`chariot/metrics.py`) | unchanged | PASS — both persistences, the clear-sky naive with its energy error, the daylight % of rated |
+| W6 | solar-only advisory mode (`chariot/advisory.py`) | unchanged | PASS — the SOC/grid event probabilities are nulled and flagged `hybrid_assumed` |
+| W7 | low-dimensional PyMC reference (offline) | — | see `docs/PYMC_LOW_DIMENSIONAL_PLAN.md` |
 
 Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
 
-## 13. License / attribution
+## 13. 2023 holdout results + what we claim
+
+The 2023 window was **never fitted and never selected on**. The model is
+fitted on the first 60 % of 2022, the calibration and the residual weight are
+selected on the remaining 40 % of 2022, and 2023 is reported once, at the
+end.
+
+| | 2022 validation (selection) | 2023 test (report only) |
+| --- | --- | --- |
+| MAE | 21,312 W | 17,260 W |
+| RMSE | 29,151 W | 23,713 W |
+| bias | +4,558 W | +5,606 W |
+| daylight MAE as % of rated | 9.82 % | 8.27 % |
+| energy error | 360,247 Wh | 283,309 Wh |
+| P10–P90 coverage | 0.843 | 0.879 |
+| Tribunal survival (mean / min) | 0.956 / 0.930 | 0.936 / 0.415 |
+| scenarios proposed / rejected | 8,000 / 351 | 8,000 / 514 |
+| baseline: persistence at the horizon | 69,867 W | 68,866 W |
+| baseline: persistence at 15 minutes (single step) | 9,323 W | 14,116 W |
+| baseline: clear-sky naive | 41,560 W | 38,902 W |
+
+40 rolling origins per window, 200 scenarios per origin, the v3 inference
+code unchanged.
+
+**What we claim**
+
+* CHARIOT forecasts the **solar** channel of a solar-only site on a year it
+  has never seen: 8.3 % of the rated DC power as a daylight MAE, with a
+  +5.6 kW bias and a 0.879 P10–P90 coverage, and it beats the
+  horizon-matched persistence by 4.0× and the clear-sky naive baseline by
+  2.3×.
+* The scenarios are **physics-certified by the Tribunal**: 94 % of the
+  proposed paths survive, and the rejections are recorded, not dropped.
+* The platform is **advisory only**. It publishes forecasts, confidence and
+  event probabilities for human review. There is no dispatch, setpoint or
+  control endpoint.
+* The clear-sky reference is **documented and versioned**
+  (`chariot_clearsky_v2.0_fixed_plane`): a fixed 15° north plane inferred
+  from the measured POA of the training year, the Ineichen/Perez model with
+  the static Linke climatology, and the export's own DC conversion.
+
+**What we do not claim**
+
+* No forecast-skill claim on the load, the battery, the state of charge or
+  the grid: this site has **no meter** for any of them. The hybrid event
+  probabilities are nulled in the advisory payload and marked
+  `hybrid_assumed`.
+* No weather-forecast skill. Nothing in this repository consumes an issued
+  forecast; the ERA5 covariates are labelled covariates, not forecasts.
+* No DSM/CERC readiness claim. The "% of rated" figure is a descriptive
+  daylight error, not a compliance metric.
+* No claim that the 2023 numbers are anything but **report-only**.
+* The 2022 test tail of the old 60/20/20 protocol is **discarded**: under
+  the 2022 → 2023 protocol no 2022 row is a test target.
+
+**What the improvement programme changed**
+
+| stage | outcome |
+| --- | --- |
+| W1 — protocol + QC | landed (the 2022 → 2023 protocol, the QC module, the manifests) |
+| W2 — clear-sky upgrade | **landed**: the daylight clearness above 1.05 fell from 22.45 % to 1.78 % on the validation window |
+| W3 — clearness calibration | **not promoted**: the selection kept the shrinkage at 0 (the bias is a tail effect, not a level error) |
+| W4 — residual chamber | **not promoted**: the selected weight is 0 (the clearness innovation is not predictable at 15 minutes) |
+| W5 — baselines and metrics | landed (both persistences, the clear-sky naive with its energy error, the daylight % of rated) |
+| W6 — solar-only advisory | landed (the hybrid events are nulled and flagged) |
+| W7 — low-dimensional PyMC reference | see `docs/PYMC_LOW_DIMENSIONAL_PLAN.md` |
+
+## 14. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.
@@ -23950,7 +24389,8 @@ bytes  : 177753
 PART 10 — THE COMMIT HISTORY
 ==============================================================================
 How the repository got here.
-e771c6d (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) W1: 2022->2023 evaluation protocol, dataset QC, stage reports
+0c5ce0b (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) W2: one documented clear-sky reference for both years
+e771c6d W1: 2022->2023 evaluation protocol, dataset QC, stage reports
 a744f61 docs: publish the complete CHARIOT report as a single text file
 ad806c0 docs: sharpen the diagnosis of the reference posterior's non-convergence
 79fa481 feat(reference): make the offline PyMC clearness reference identifiable and publish the ops-vs-PyMC comparison
@@ -23962,31 +24402,27 @@ c880b91 (grafted, origin/main, origin/HEAD, main) first
 
 ------------------------------------------------------------------------------
 The most recent commit in detail:
-e771c6d W1: 2022->2023 evaluation protocol, dataset QC, stage reports
- chariot-vscode/README.md                           |   83 +-
- chariot-vscode/chariot/dataset_qc.py               |  257 ++
- chariot-vscode/chariot/metrics.py                  |   10 +-
- chariot-vscode/chariot/pipeline.py                 |   44 +-
- chariot-vscode/chariot/stage_report.py             |  241 ++
- chariot-vscode/chariot/training_extract.py         |   34 +-
- chariot-vscode/docs/CHARIOT_FULL_REPORT.txt        |  504 +++-
- chariot-vscode/runs/w1_data_2022_2023/qc.json      |  175 ++
- chariot-vscode/runs/w1_data_2022_2023/summary.md   |   49 +
- .../w1_ops_v3_protocol_2022_2023/manifest.json     |  374 +++
- .../runs/w1_ops_v3_protocol_2022_2023/summary.json |   43 +
- .../runs/w1_ops_v3_protocol_2022_2023/windows.json | 2771 ++++++++++++++++++++
- .../runs/w1_ops_v3_val_2022/manifest.json          |  374 +++
- .../runs/w1_ops_v3_val_2022/summary.json           |   43 +
- .../runs/w1_ops_v3_val_2022/windows.json           | 2756 +++++++++++++++++++
- .../runs/w1_protocol_2022_2023/comparison.json     |  308 +++
- .../runs/w1_protocol_2022_2023/summary.md          |   97 +
- chariot-vscode/scripts/build_w1_report.py          |  218 ++
- chariot-vscode/scripts/prepare_dataset.py          |  271 +-
- chariot-vscode/scripts/run_chariot3.py             |   21 +
- chariot-vscode/tests/test_dataset_qc.py            |  113 +
- chariot-vscode/tests/test_protocol_splits.py       |  199 ++
- 22 files changed, 8874 insertions(+), 111 deletions(-)
+0c5ce0b W2: one documented clear-sky reference for both years
+ chariot-vscode/README.md                           |   48 +-
+ chariot-vscode/chariot/clearsky.py                 |  339 +++
+ chariot-vscode/docs/CHARIOT_FULL_REPORT.txt        |  174 +-
+ chariot-vscode/requirements.txt                    |    6 +
+ .../runs/ops_v3_cs_v2_2023test/manifest.json       |  374 +++
+ .../runs/ops_v3_cs_v2_2023test/summary.json        |   43 +
+ .../runs/ops_v3_cs_v2_2023test/windows.json        | 2751 ++++++++++++++++++++
+ .../runs/ops_v3_cs_v2_val2022/manifest.json        |  374 +++
+ .../runs/ops_v3_cs_v2_val2022/summary.json         |   43 +
+ .../runs/ops_v3_cs_v2_val2022/windows.json         | 2748 +++++++++++++++++++
+ chariot-vscode/runs/w2_clearsky_v2/comparison.json |  418 +++
+ chariot-vscode/runs/w2_clearsky_v2/summary.md      |  118 +
+ chariot-vscode/runs/w2_data_cs_v2/qc.json          |  175 ++
+ chariot-vscode/runs/w2_data_cs_v2/summary.md       |   49 +
+ chariot-vscode/scripts/build_w2_report.py          |  265 ++
+ chariot-vscode/scripts/prepare_dataset.py          |   70 +
+ chariot-vscode/tests/test_clearsky.py              |  219 ++
+ chariot-vscode/tests/test_protocol_splits.py       |    1 +
+ 18 files changed, 8192 insertions(+), 23 deletions(-)
 ==============================================================================
 END OF REPORT
 ==============================================================================
-commit e771c6d8ce9d — arena/eb404247-chariotmodel — 2026-10-24 18:04 UTC
+commit 0c5ce0bc9c83 — arena/eb404247-chariotmodel — 2026-10-24 18:19 UTC

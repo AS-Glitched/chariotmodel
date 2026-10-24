@@ -1,0 +1,150 @@
+{
+  "stage_id": "W4",
+  "title": "Constrained residual chamber",
+  "protocol": {
+    "name": "year2022_2023",
+    "train": "first 60 % of the 2022 window (fit only)",
+    "validate": "remaining 40 % of the 2022 window (selection only)",
+    "test": "the whole 2023 window (report only \u2014 never fitted, never selected on)",
+    "split_policy": "pre_assigned (upstream protocol)",
+    "model note": "the residual chamber stays a bounded shadow corrector: the governor is the only runtime authority and the Tribunal still certifies every path"
+  },
+  "data": {
+    "content_hashes": {
+      "dataset": "7cc39f8673ccb2fb4ee2183f9eea4eea33456831906ec5e635487c55b9c20607"
+    },
+    "split_boundaries": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:00:00+00:00",
+        "count": 33827
+      },
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 20263
+      },
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "split_row_counts": {
+      "test": 33827,
+      "train": 20263,
+      "validate": 14000
+    }
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_d5f67dc1eb",
+    "tribunal_policy": "tribunal_v3.0",
+    "residual_version": "resid_solar_w_0033adc063",
+    "selected_w": 0.0,
+    "residual_family": "ridge",
+    "w_max": 0.2,
+    "night_forcing": "the correction is forced to zero when there is no clear sky",
+    "features": "model means, clear-sky level, the model's own expected ratio, lags, hour/doy harmonics, the previous correction (never the same-time measurement)"
+  },
+  "metrics": {
+    "validate_2022 (selection) \u2014 W2 baseline": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": null,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    },
+    "validate_2022 (selection) \u2014 W4 residual run": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": 9.815195737636627,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    }
+  },
+  "baselines": {
+    "validate_2022 :: persistence_origin": {
+      "mae_mean": 69867.29948528645,
+      "rmse_mean": 85382.2837594694,
+      "bias_mean": 9710.406500807292,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: clear_sky_naive": {
+      "mae_mean": 41560.10624703309,
+      "rmse_mean": 49825.3323416747,
+      "bias_mean": 41559.997884600016,
+      "energy_error_wh_mean": 997439.9492304003
+    }
+  },
+  "gates": [
+    {
+      "name": "GATE: >= 1 % validation MAE improvement from the residual",
+      "target": "at least 1 % better than w = 0",
+      "observed": "0.000 % (8,624 W at w = 0 vs 8,624 W at the best w)",
+      "pass": false,
+      "note": "The ridge explains 2.5 % of the residual variance (R^2 vs the mean): the clearness innovation is not predictable at a 15-minute horizon, so there is nothing for the chamber to correct."
+    },
+    {
+      "name": "GATE: cleaner bias",
+      "target": "|bias| below the W2 baseline",
+      "observed": "4,558 W \u2014 unchanged (w = 0)",
+      "pass": false
+    },
+    {
+      "name": "The weight stays at or near zero",
+      "target": "w <= 0.20 and the selection picks w ~ 0",
+      "observed": "selected w = 0.0 (ceiling 0.2)",
+      "pass": true
+    },
+    {
+      "name": "The governor is the only runtime authority",
+      "target": "the residual weight applied at run time is the governor's effective weight",
+      "observed": "the pipeline sets the governor weight from the selection and the genesis uses governor.get_effective_w(); the Tribunal certifies every path afterwards",
+      "pass": true
+    },
+    {
+      "name": "Night forcing",
+      "target": "the correction is ~0 when there is no clear sky",
+      "observed": "the residual is zeroed wherever the clear sky is below 1 W, so it cannot invent night power",
+      "pass": true
+    }
+  ],
+  "claims": {
+    "allowed": [
+      "The residual chamber is bounded, governed, Tribunal-checked and leakage-safe.",
+      "Its weight is selected on the 2022 validation window and is now 0.",
+      "The clearness innovation is not predictable at this horizon (R^2 = 0.025)."
+    ],
+    "forbidden": [
+      "Any claim that the residual improves the forecast: the selected weight is 0.",
+      "Any claim that the residual is a control path: it never bypasses the Tribunal."
+    ]
+  },
+  "notes": [
+    "The chamber gained two things in W4: the residual's own lag as a feature (the correction proposed for the previous step, never the realised measurement) and a hard night forcing.",
+    "Because the selected weight is 0, the operational scenarios are bit-identical to the W2 baseline."
+  ]
+}

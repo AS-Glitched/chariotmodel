@@ -364,15 +364,82 @@ is only promoted if it passes its gate on the **2022 validation** window. The
 | --- | --- | --- | --- |
 | W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
 | W2 | clear-sky upgrade: one documented reference for both years (`chariot/clearsky.py`, `chariot_clearsky_v2.0_fixed_plane`) | unchanged (`hcbsswm_v3.0_empirical_bayes_*`), reference versioned separately | PASS — daylight kt>1.05 on 2022 val 22.45 % → 1.78 %, validation MAE +0.8 %, survival 0.944 → 0.956 |
-| W3 | ops bias / hour-elevation calibration | — | pending |
-| W4 | constrained residual chamber | — | pending |
-| W5 | baselines and metric honesty | — | pending |
-| W6 | solar-only advisory mode | — | pending |
-| W7 | low-dimensional PyMC reference (offline) | — | pending |
+| W3 | clearness calibration (`chariot/clearness_calibration.py`) | unchanged — the calibration is off by default | NOT PROMOTED — the validation selection kept the shrinkage at 0.0 |
+| W4 | residual chamber: the previous-correction feature + night forcing | `resid_solar_w_*` (the selected weight is 0) | NOT PROMOTED — 0.0 % validation MAE improvement, so the weight stays at 0 |
+| W5 | baselines and metric honesty (`chariot/metrics.py`) | unchanged | PASS — both persistences, the clear-sky naive with its energy error, the daylight % of rated |
+| W6 | solar-only advisory mode (`chariot/advisory.py`) | unchanged | PASS — the SOC/grid event probabilities are nulled and flagged `hybrid_assumed` |
+| W7 | low-dimensional PyMC reference (offline) | — | see `docs/PYMC_LOW_DIMENSIONAL_PLAN.md` |
 
 Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
 
-## 13. License / attribution
+## 13. 2023 holdout results + what we claim
+
+The 2023 window was **never fitted and never selected on**. The model is
+fitted on the first 60 % of 2022, the calibration and the residual weight are
+selected on the remaining 40 % of 2022, and 2023 is reported once, at the
+end.
+
+| | 2022 validation (selection) | 2023 test (report only) |
+| --- | --- | --- |
+| MAE | 21,312 W | 17,260 W |
+| RMSE | 29,151 W | 23,713 W |
+| bias | +4,558 W | +5,606 W |
+| daylight MAE as % of rated | 9.82 % | 8.27 % |
+| energy error | 360,247 Wh | 283,309 Wh |
+| P10–P90 coverage | 0.843 | 0.879 |
+| Tribunal survival (mean / min) | 0.956 / 0.930 | 0.936 / 0.415 |
+| scenarios proposed / rejected | 8,000 / 351 | 8,000 / 514 |
+| baseline: persistence at the horizon | 69,867 W | 68,866 W |
+| baseline: persistence at 15 minutes (single step) | 9,323 W | 14,116 W |
+| baseline: clear-sky naive | 41,560 W | 38,902 W |
+
+40 rolling origins per window, 200 scenarios per origin, the v3 inference
+code unchanged.
+
+**What we claim**
+
+* CHARIOT forecasts the **solar** channel of a solar-only site on a year it
+  has never seen: 8.3 % of the rated DC power as a daylight MAE, with a
+  +5.6 kW bias and a 0.879 P10–P90 coverage, and it beats the
+  horizon-matched persistence by 4.0× and the clear-sky naive baseline by
+  2.3×.
+* The scenarios are **physics-certified by the Tribunal**: 94 % of the
+  proposed paths survive, and the rejections are recorded, not dropped.
+* The platform is **advisory only**. It publishes forecasts, confidence and
+  event probabilities for human review. There is no dispatch, setpoint or
+  control endpoint.
+* The clear-sky reference is **documented and versioned**
+  (`chariot_clearsky_v2.0_fixed_plane`): a fixed 15° north plane inferred
+  from the measured POA of the training year, the Ineichen/Perez model with
+  the static Linke climatology, and the export's own DC conversion.
+
+**What we do not claim**
+
+* No forecast-skill claim on the load, the battery, the state of charge or
+  the grid: this site has **no meter** for any of them. The hybrid event
+  probabilities are nulled in the advisory payload and marked
+  `hybrid_assumed`.
+* No weather-forecast skill. Nothing in this repository consumes an issued
+  forecast; the ERA5 covariates are labelled covariates, not forecasts.
+* No DSM/CERC readiness claim. The "% of rated" figure is a descriptive
+  daylight error, not a compliance metric.
+* No claim that the 2023 numbers are anything but **report-only**.
+* The 2022 test tail of the old 60/20/20 protocol is **discarded**: under
+  the 2022 → 2023 protocol no 2022 row is a test target.
+
+**What the improvement programme changed**
+
+| stage | outcome |
+| --- | --- |
+| W1 — protocol + QC | landed (the 2022 → 2023 protocol, the QC module, the manifests) |
+| W2 — clear-sky upgrade | **landed**: the daylight clearness above 1.05 fell from 22.45 % to 1.78 % on the validation window |
+| W3 — clearness calibration | **not promoted**: the selection kept the shrinkage at 0 (the bias is a tail effect, not a level error) |
+| W4 — residual chamber | **not promoted**: the selected weight is 0 (the clearness innovation is not predictable at 15 minutes) |
+| W5 — baselines and metrics | landed (both persistences, the clear-sky naive with its energy error, the daylight % of rated) |
+| W6 — solar-only advisory | landed (the hybrid events are nulled and flagged) |
+| W7 — low-dimensional PyMC reference | see `docs/PYMC_LOW_DIMENSIONAL_PLAN.md` |
+
+## 14. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.

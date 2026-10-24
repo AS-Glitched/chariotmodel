@@ -129,6 +129,7 @@ def generate_batch(
     mode: str = "hybrid_hierarchical",
     dt_h: float = 0.25,
     paths: dict[str, np.ndarray] | None = None,
+    clearness_calibration: Any = None,
 ) -> ScenarioBatch:
     """Generate a scenario batch and solve the physics for every path.
 
@@ -166,6 +167,28 @@ def generate_batch(
     solar = sim["solar_w"]
     load = sim["load_w"]
 
+    # -- clearness calibration (W3) ---------------------------------------
+    # A bin-wise level correction on the clearness ratio, fitted on the
+    # training split and selected on the validation split.  It is applied
+    # here, in the adapter, so that the operational scenarios and the
+    # offline PyMC reference paths go through exactly the same seam.
+    if clearness_calibration is not None and getattr(clearness_calibration, "active", False):
+        from chariot.clearness_calibration import apply_calibration_to_paths, calibration_multiplier
+        from chariot.model import CLEARNESS_MAX, solar_elevation_deg
+
+        meta = getattr(ctx, "metadata", {}) or {}
+        elevation = solar_elevation_deg(
+            frame["timestamp_utc"],
+            float(meta.get("latitude") or 0.0),
+            float(meta.get("longitude") or 0.0),
+        )
+        clear = clear_sky_series(frame)
+        clear = np.nan_to_num(clear, nan=0.0)
+        mult = calibration_multiplier(clearness_calibration, frame, elevation)
+        solar = apply_calibration_to_paths(
+            solar, mult, clear, clearness_max=float(CLEARNESS_MAX)
+        )
+
     # -- residual augmentation (bounded, never bypasses the Tribunal) ------
     if residual_artifact is not None and residual_weight > 0.0:
         from chariot.residual import build_features, propose_paths
@@ -188,6 +211,27 @@ def generate_batch(
         )
         corrections = np.asarray(propose_paths(residual_artifact, features), dtype=float)
         corrections = corrections.reshape(solar.shape)
+        # Second pass: the residual's own lag (the correction proposed for
+        # the previous step) is a legitimate, leakage-safe feature.
+        if "previous_correction" in (getattr(residual_artifact, "feature_names", None) or []):
+            lag = np.concatenate([np.zeros((solar.shape[0], 1)), corrections[:, :-1]], axis=1)
+            features2, _ = build_features(
+                frame,
+                mu_solar=solar,
+                mu_load=load,
+                clear_sky=clear,
+                expected_ratio=expected_ratio,
+                last_solar=last_solar,
+                last_load=last_load,
+                calibration=calibration or {},
+                previous_correction=lag.reshape(-1),
+            )
+            corrections = np.asarray(
+                propose_paths(residual_artifact, features2), dtype=float
+            ).reshape(solar.shape)
+        # The night carries no signal: the correction is forced to zero when
+        # there is no clear sky, so the residual cannot invent night power.
+        corrections = np.where(clear[None, :] > 1.0, corrections, 0.0)
         solar = np.maximum(solar + float(residual_weight) * corrections, 0.0)
 
     # -- deterministic physics for every path ------------------------------

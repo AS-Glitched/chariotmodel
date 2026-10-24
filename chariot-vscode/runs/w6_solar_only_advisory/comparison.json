@@ -1,0 +1,155 @@
+{
+  "stage_id": "W6",
+  "title": "Solar-only advisory mode",
+  "protocol": {
+    "name": "year2022_2023",
+    "train": "first 60 % of the 2022 window (fit only)",
+    "validate": "remaining 40 % of the 2022 window (selection only)",
+    "test": "the whole 2023 window (report only \u2014 never fitted, never selected on)",
+    "split_policy": "pre_assigned (upstream protocol)",
+    "model note": "no model change: the advisory contract changes, the physics does not"
+  },
+  "data": {
+    "content_hashes": {
+      "dataset": "3bf7e46e99e2673ab9fb206ca3d17e8badb3d9ca2ed363d0d5d88eee5e42719d"
+    },
+    "split_boundaries": {
+      "test": {
+        "min": "2023-01-01 00:00:00+00:00",
+        "max": "2023-12-31 14:00:00+00:00",
+        "count": 33827
+      },
+      "train": {
+        "min": "2022-01-01 00:00:00+00:00",
+        "max": "2022-08-07 18:00:00+00:00",
+        "count": 20263
+      },
+      "validate": {
+        "min": "2022-08-07 18:15:00+00:00",
+        "max": "2022-12-31 14:00:00+00:00",
+        "count": 14000
+      }
+    },
+    "split_row_counts": {
+      "test": 33827,
+      "train": 20263,
+      "validate": 14000
+    }
+  },
+  "model": {
+    "model_name": "chariot_hcbsswm",
+    "model_version": "hcbsswm_v3.0_empirical_bayes_d5f67dc1eb",
+    "tribunal_policy": "tribunal_v3.0",
+    "residual_version": "resid_solar_w_0033adc063",
+    "selected_w": 0.0
+  },
+  "metrics": {
+    "validate_2022 (selection) \u2014 final configuration": {
+      "mae_mean": 21312.01275221354,
+      "rmse_mean": 29150.53442372119,
+      "bias_mean": 4557.940409192708,
+      "coverage_mean": 0.84296875,
+      "energy_error_wh_mean": 360246.6167593749,
+      "daylight_mae_pct_of_rated_mean": 9.815195737636627,
+      "n_windows": 40,
+      "survival_rate": 0.9561250000000001,
+      "min_survival_rate": 0.93,
+      "total_rejected": 351,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 326,
+        "SOLAR_OVERSCALE": 21,
+        "GRID_IMPORT_LIMIT": 5,
+        "GRID_EXPORT_LIMIT": 3
+      }
+    },
+    "test_2023 (report only) \u2014 final configuration": {
+      "mae_mean": 17259.708455442706,
+      "rmse_mean": 23712.568674995095,
+      "bias_mean": 5605.821767890625,
+      "coverage_mean": 0.8794270833333332,
+      "energy_error_wh_mean": 283309.38169312506,
+      "daylight_mae_pct_of_rated_mean": 8.274332468054961,
+      "n_windows": 40,
+      "survival_rate": 0.93575,
+      "min_survival_rate": 0.415,
+      "total_rejected": 514,
+      "constraint_counts": {
+        "SOLAR_RAMP_LIMIT": 478,
+        "SOLAR_OVERSCALE": 34,
+        "GRID_IMPORT_LIMIT": 3,
+        "GRID_EXPORT_LIMIT": 2
+      }
+    }
+  },
+  "baselines": {
+    "validate_2022 :: solar_w::persistence_horizon_matched": {
+      "mae_mean": 69867.29948528645,
+      "rmse_mean": 85382.2837594694,
+      "bias_mean": 9710.406500807292,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: solar_w::persistence_1step": {
+      "mae_mean": 9323.266032500003,
+      "rmse_mean": 9323.266032500003,
+      "bias_mean": -1043.3119524999988,
+      "energy_error_wh_mean": null
+    },
+    "validate_2022 :: solar_w::clear_sky_naive": {
+      "mae_mean": 41560.10624703309,
+      "rmse_mean": 49825.3323416747,
+      "bias_mean": 41559.997884600016,
+      "energy_error_wh_mean": 997439.9492304003
+    },
+    "test_2023 :: solar_w::persistence_horizon_matched": {
+      "mae_mean": 68865.8841776823,
+      "rmse_mean": 83263.90639826705,
+      "bias_mean": 767.032881171874,
+      "energy_error_wh_mean": null
+    },
+    "test_2023 :: solar_w::persistence_1step": {
+      "mae_mean": 14116.453872499998,
+      "rmse_mean": 14116.453872499998,
+      "bias_mean": -447.00151250000164,
+      "energy_error_wh_mean": null
+    },
+    "test_2023 :: solar_w::clear_sky_naive": {
+      "mae_mean": 38901.84744495513,
+      "rmse_mean": 46542.3815183559,
+      "bias_mean": 38827.34492429584,
+      "energy_error_wh_mean": 931856.2781831002
+    }
+  },
+  "gates": [
+    {
+      "name": "GATE: the hybrid event probabilities are absent or explicitly marked as assumed",
+      "target": "no published SOC/grid probability without a measured load and state of charge",
+      "observed": "hybrid_assumed=True; the SOC and grid probabilities are nulled and the payload carries the note",
+      "pass": true
+    },
+    {
+      "name": "GATE: the solar events are untouched",
+      "target": "the PV event is still published",
+      "observed": "p_pv_above_certified_ac = None",
+      "pass": false
+    },
+    {
+      "name": "GATE: the advisory stays advisory-only",
+      "target": "no control endpoint, no dispatch",
+      "observed": "unchanged \u2014 the platform publishes forecasts, confidence and event probabilities for human review",
+      "pass": true
+    }
+  ],
+  "claims": {
+    "allowed": [
+      "The solar channel, its uncertainty and the physics survival rate are validated on the site.",
+      "The hybrid events are published as assumed, and the payload says so."
+    ],
+    "forbidden": [
+      "Any claim that the load, SOC or grid forecast is validated skill on this site: there is no meter for any of them."
+    ]
+  },
+  "notes": [
+    "The site card declares the load profile, the battery and the starting state of charge; those are engineering assumptions, not measurements.",
+    "The mode is the default; `--hybrid-advisory` restores the previous behaviour for a site that does have the meters."
+  ]
+}

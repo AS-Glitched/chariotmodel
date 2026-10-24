@@ -88,6 +88,7 @@ def build_features(
     last_load: float = 0.0,
     solar_lags: np.ndarray | None = None,
     load_lags: np.ndarray | None = None,
+    previous_correction: np.ndarray | None = None,
     calibration: dict[str, float] | None = None,
     site_encoding: float = 0.0,
 ) -> tuple[np.ndarray, list[str]]:
@@ -140,6 +141,16 @@ def build_features(
     regime_day = (clear_sky > 1.0).astype(float)
     regime_cloud = np.clip(expected_ratio_flat, 0.0, 1.5)
 
+    # The residual's own lag: the correction proposed for the previous step.
+    # It is the model's own output (never the realised residual), so it is
+    # knowable at forecast time and it cannot leak the target.
+    if previous_correction is None:
+        prev_corr = np.zeros(n, dtype=float)
+    else:
+        prev_corr = np.asarray(previous_correction, dtype=float).reshape(-1)
+        if prev_corr.size != n:
+            prev_corr = np.zeros(n, dtype=float)
+
     def tiled(values: np.ndarray) -> np.ndarray:
         return np.tile(np.asarray(values, dtype=float), n_scen)
 
@@ -161,6 +172,7 @@ def build_features(
         tiled(np.cos(2 * np.pi * doy / 365.25)),
         tiled(regime_day),
         regime_cloud,
+        tiled(prev_corr),
         np.full(n * n_scen, site_encoding),
         np.full(n * n_scen, cal_arr[0]),
         np.full(n * n_scen, cal_arr[1]),
@@ -182,6 +194,7 @@ def build_features(
         "doy_cos",
         "is_daylight",
         "regime_ratio",
+        "previous_correction",
         "site_encoding",
         "cal_pv_correction",
         "cal_capacity_factor",

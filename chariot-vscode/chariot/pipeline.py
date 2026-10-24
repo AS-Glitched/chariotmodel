@@ -47,7 +47,12 @@ from chariot.feedback import run_cortex
 from chariot.genesis import generate_batch
 from chariot.governor import ResidualStabilityGovernor
 from chariot.hashing import hash_obj, short_hash
-from chariot.metrics import aggregate_windows, baseline_scoreboard, score_window
+from chariot.metrics import (
+    aggregate_windows,
+    baseline_scoreboard,
+    daylight_mae_percent_of_rated,
+    score_window,
+)
 from chariot.model import (
     clear_sky_series,
     filter_state_series,
@@ -161,6 +166,17 @@ class PipelineConfig:
     #: 2022 selection metrics of the 2022 -> 2023 protocol.  The model is
     #: always fitted on the train split only.
     evaluate_split: str = "test"
+    #: Enable the W3 clearness calibration (a bin-wise level correction on
+    #: the clearness ratio, fitted on train and selected on validate).  Off by
+    #: default so the v3 behaviour is unchanged.
+    clearness_calibration: bool = False
+    #: Solar-only advisory mode: the SOC / grid event probabilities are
+    #: nulled unless the site has *measured* load and state of charge.
+    solar_only_advisory: bool = True
+    #: Candidate shrinkings for the calibration selection.
+    calibration_shrinkages: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
+    #: Scenarios used while fitting / scoring the calibration.
+    calibration_scenarios: int = 120
     #: Calibrate the ensemble spread on the validation split.
     calibrate_spread: bool = True
     spread_windows: int = 6
@@ -330,6 +346,30 @@ def run(config: PipelineConfig) -> dict[str, Any]:
         dataset_content_hash=manifest["content_hash"],
         validation=validate,
     )
+    # ---------------------------------------------- clearness calibration (W3)
+    calibration_info: dict[str, Any] = {"enabled": False}
+    clearness_calibration = None
+    if config.clearness_calibration and len(train) and len(validate):
+        clearness_calibration, calibration_info = _fit_clearness_calibration(
+            model,
+            train,
+            validate,
+            ctx,
+            config,
+            dataset,
+        )
+        if clearness_calibration is not None:
+            model.sites[config.site_id].solar.diagnostics["clearness_calibration"] = (
+                clearness_calibration.to_dict()
+            )
+            # The calibration is part of the model: the version must change.
+            from chariot.model import MODEL_VERSION  # noqa: PLC0415
+            from chariot.hashing import hash_obj, short_hash  # noqa: PLC0415
+
+            model.model_version = (
+                f"{MODEL_VERSION}_{short_hash(hash_obj(model.sites[config.site_id].to_dict()), 10)}"
+            )
+
     # ------------------------------------------- ensemble spread calibration
     spread_info: dict[str, Any] = {"calibrated": False}
     if config.calibrate_spread and len(validate):
@@ -401,6 +441,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             residual_artifact=residual_artifact,
             state=state,
             dt_h=0.25,
+            clearness_calibration=clearness_calibration,
         )
         store.insert(
             "scenario_batches",
@@ -465,6 +506,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             ctx=ctx,
             baselines=baselines,
             rejection_sample=tribunal.rejections,
+            solar_only=config.solar_only_advisory,
         )
         for role, payload in advisories.items():
             store.insert(
@@ -483,6 +525,36 @@ def run(config: PipelineConfig) -> dict[str, Any]:
                 },
             )
         metrics = score_window(actual, advisories["grid_engineer"], dt_h=0.25)
+        # The DSM-style shape: the daylight error as a percentage of the
+        # rated DC power.  It is only defined when the site has a rating.
+        _bands = advisories["grid_engineer"].get("solar_w") or {}
+        _p50 = np.asarray(_bands.get("p50", []), dtype=float)
+        if _p50.size:
+            _truth = (
+                pd.to_numeric(actual["solar_w"], errors="coerce").to_numpy(dtype=float)[
+                    : _p50.size
+                ]
+                if "solar_w" in actual.columns
+                else np.full(_p50.size, np.nan)
+            )
+            _clear = (
+                np.nan_to_num(
+                    pd.to_numeric(actual["clear_sky_power_w"], errors="coerce").to_numpy(
+                        dtype=float
+                    )[: _p50.size],
+                    nan=0.0,
+                )
+                if "clear_sky_power_w" in actual.columns
+                else None
+            )
+            metrics.setdefault("solar_w", {})["daylight_mae_pct_of_rated"] = (
+                daylight_mae_percent_of_rated(
+                    _truth,
+                    _p50,
+                    clear_sky=_clear,
+                    rated_pv_w=ctx.rated_pv_w if getattr(ctx, "rated_pv_w", None) else None,
+                )
+            )
         results.append(
             {
                 "origin": origin_label,
@@ -560,6 +632,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             "load_channel": model.sites[config.site_id].load.to_dict(),
         },
         "residual": residual_info,
+        "clearness_calibration": calibration_info,
         "governor": governor.status(),
         "tribunal": {
             "policy_version": TRIBUNAL_POLICY.policy_version,
@@ -733,6 +806,102 @@ def _calibrate_spread(
 
 
 
+def _fit_clearness_calibration(
+    model: Any,
+    train: pd.DataFrame,
+    validate: pd.DataFrame,
+    ctx: Any,
+    config: PipelineConfig,
+    dataset: pd.DataFrame,
+) -> tuple[Any, dict[str, Any]]:
+    """Fit the W3 clearness calibration on train and select it on validate.
+
+    The offsets are fitted against the *scenario P50* on rolling origins of
+    the training split -- the same forecast geometry the operational run
+    uses -- and the shrinkage is chosen on the validation split.  The
+    report-only split is never touched.
+    """
+    from chariot.clearness_calibration import (
+        apply_shrinkage,
+        fit_clearness_calibration,
+        score_calibrations,
+    )
+    from chariot.model import solar_elevation_deg
+
+    site_id = config.site_id
+    horizon_steps = HORIZONS[config.horizon]
+    history = dataset.sort_values("timestamp_utc").reset_index(drop=True)
+
+    def state_fn(_model: Any, _actual: pd.DataFrame, future: pd.DataFrame, _ctx: Any) -> dict:
+        return _origin_state(_model, history, future, _ctx)
+
+    def elevation_fn(frame: pd.DataFrame, context: Any) -> np.ndarray:
+        meta = getattr(context, "metadata", {}) or {}
+        return solar_elevation_deg(
+            frame["timestamp_utc"],
+            float(meta.get("latitude") or 0.0),
+            float(meta.get("longitude") or 0.0),
+        )
+
+    train_windows = _spread_windows(train, horizon_steps, config.max_windows)
+    base, residuals = fit_clearness_calibration(
+        model,
+        site_id,
+        ctx,
+        train_windows,
+        n_scenarios=config.calibration_scenarios,
+        seed=config.seed,
+        shrinkage=1.0,
+        state_fn=state_fn,
+        elevation_fn=elevation_fn,
+    )
+    if base.n_rows == 0:
+        return None, {"enabled": False, "reason": "no daylight rows in the training windows"}
+
+    validate_windows = _plan_windows(validate, horizon_steps, config.max_windows)
+    candidates = [apply_shrinkage(base, float(s)) for s in config.calibration_shrinkages]
+    raw_scores = score_calibrations(
+        model,
+        site_id,
+        ctx,
+        validate_windows,
+        candidates,
+        n_scenarios=config.calibration_scenarios,
+        seed=config.seed,
+        state_fn=state_fn,
+        elevation_fn=elevation_fn,
+    )
+    scores: list[dict[str, Any]] = [
+        {"shrinkage": float(s), **score}
+        for s, score in zip(config.calibration_shrinkages, raw_scores)
+    ]
+
+    usable = [s for s in scores if s["n"] > 0 and math.isfinite(s["mae"])]
+    if not usable:
+        return None, {"enabled": False, "reason": "no validation windows"}
+    best_mae = min(s["mae"] for s in usable)
+    # Among the candidates within 1 % of the best MAE, take the one with the
+    # smallest absolute bias: the gate is bias-first, MAE-second.
+    near_best = [s for s in usable if s["mae"] <= best_mae * 1.01]
+    chosen = min(near_best, key=lambda s: abs(s["bias"]))
+    calibration = apply_shrinkage(base, chosen["shrinkage"])
+
+    info = {
+        "enabled": True,
+        "version": calibration.version,
+        "selected_shrinkage": chosen["shrinkage"],
+        "selection_scores": scores,
+        "selected_score": chosen,
+        "global_log_offset": base.global_offset,
+        "n_fit_rows": base.n_rows,
+        "n_train_windows": len(train_windows),
+        "n_validate_windows": len(validate_windows),
+        "fitted_on": "train_2022 (rolling origins)",
+        "selected_on": "validate_2022",
+        "clearness_cap": "re-applied after the correction",
+    }
+    return calibration, info
+
 def _fit_residual(
     store: Store,
     model: Any,
@@ -788,6 +957,8 @@ def _fit_residual(
     val_mu = one_step_prediction(model, site_id, val_history)
     val_y = solar_series(val_history)
     val_expected = np.where(val_clear > 1.0, val_mu / np.maximum(val_clear, 1.0), 0.0)
+    val_target = val_y - val_mu
+    val_prev = np.concatenate([[0.0], np.nan_to_num(val_target[:-1], nan=0.0)])
     X_val, _ = build_features(
         val_history,
         mu_solar=val_mu,
@@ -796,6 +967,7 @@ def _fit_residual(
         expected_ratio=val_expected,
         last_solar=float(val_y[0]),
         calibration=calibration,
+        previous_correction=val_prev,
     )
     val_mask = (
         np.isfinite(val_y)
@@ -874,6 +1046,33 @@ def _plan_windows(
         windows = windows[:max_windows]
     return windows
 
+
+def _spread_windows(
+    frame: pd.DataFrame, horizon_steps: int, n_windows: int | None
+) -> list[tuple[str, pd.DataFrame, pd.DataFrame]]:
+    """Rolling origins spread evenly across the whole frame.
+
+    ``_plan_windows`` tiles a split from its start, so the first N windows
+    only cover the beginning of the split.  That is the right behaviour for
+    the operational evaluation (it is what the v3 run reports), but it is
+    wrong for *fitting* a correction: the training windows would all come
+    from one season.  This helper spreads the origins so the fit sees the
+    whole training window.
+    """
+    n = len(frame)
+    if n <= horizon_steps:
+        return []
+    count = n_windows if n_windows else 1
+    stride = max(1, (n - horizon_steps) // max(1, count))
+    windows: list[tuple[str, pd.DataFrame, pd.DataFrame]] = []
+    start = 0
+    while start + horizon_steps <= n:
+        end = start + horizon_steps
+        future = frame.iloc[start:end].reset_index(drop=True)
+        label = str(future["timestamp_utc"].iloc[0])
+        windows.append((label, future, future.copy()))
+        start += stride
+    return windows
 
 def _lineage(
     *,
@@ -964,7 +1163,7 @@ def _summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     baselines: dict[str, Any] = {}
     for r in results:
         for row in r.get("baselines", []):
-            key = f"{row['model']}"
+            key = f"{row.get('target', 'solar_w')}::{row['model']}"
             baselines.setdefault(key, []).append(row)
     baseline_summary: dict[str, Any] = {}
     for key, rows in baselines.items():
