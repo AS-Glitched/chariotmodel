@@ -60,10 +60,29 @@ def main() -> int:
         help="skip validation-fitted ensemble spread calibration",
     )
     parser.add_argument("--keep-parquet", action="store_true", help="keep the materialised dataset")
+    parser.add_argument(
+        "--evaluate-split",
+        default="test",
+        choices=["test", "validate", "train"],
+        help="split the rolling-origin evaluation windows are drawn from",
+    )
+    parser.add_argument("--start", default=None, help="analysis window start (ISO)")
+    parser.add_argument("--end", default=None, help="analysis window end (ISO, exclusive)")
+    parser.add_argument(
+        "--honour-split",
+        action="store_true",
+        help=(
+            "honour the split assigned in the prepared slice instead of "
+            "re-splitting it chronologically (the 2022 -> 2023 protocol: "
+            "train/validate in 2022, report-only test in 2023)"
+        ),
+    )
     args = parser.parse_args()
 
     config = PipelineConfig(
         source_csv=args.source,
+        **({"start": args.start} if args.start else {}),
+        **({"end": args.end} if args.end else {}),
         out_dir=args.out,
         store_path=args.store,
         n_scenarios=args.scenarios,
@@ -73,6 +92,8 @@ def main() -> int:
         use_residual=not args.no_residual,
         calibrate_spread=not args.no_spread_calibration,
         keep_parquet=args.keep_parquet,
+        honour_split=args.honour_split,
+        evaluate_split=args.evaluate_split,
     )
     manifest = run(config)
     print(json.dumps(manifest, indent=2, default=str))

@@ -1,0 +1,43 @@
+{
+  "n_windows": 40,
+  "mean_survival_rate": 0.944375,
+  "min_survival_rate": 0.855,
+  "max_survival_rate": 0.98,
+  "total_proposed": 8000,
+  "total_rejected": 445,
+  "constraint_counts": {
+    "SOLAR_RAMP_LIMIT": 344,
+    "SOLAR_OVERSCALE": 101,
+    "GRID_EXPORT_LIMIT": 4,
+    "GRID_IMPORT_LIMIT": 2
+  },
+  "status_counts": {
+    "eligible_for_human_review": 35,
+    "reduced_confidence": 5
+  },
+  "mean_confidence": 0.46761684871463116,
+  "mean_uncertainty": 0.5046334225216231,
+  "evaluation": {
+    "solar_w": {
+      "mae_mean": 21143.31428776042,
+      "rmse_mean": 28568.03548588187,
+      "bias_mean": 4402.7420640625005,
+      "coverage_mean": 0.8059895833333334,
+      "energy_error_wh_mean": 350591.971855,
+      "n_windows": 40
+    }
+  },
+  "baselines": {
+    "persistence_origin": {
+      "mae_mean": 69053.54277322916,
+      "rmse_mean": 84244.15814806668,
+      "bias_mean": 9641.87102072917
+    },
+    "clear_sky_naive": {
+      "mae_mean": 22757.437001119793,
+      "rmse_mean": 32241.443537394247,
+      "bias_mean": 15362.542924453126,
+      "energy_error_wh_mean": 451934.585925625
+    }
+  }
+}

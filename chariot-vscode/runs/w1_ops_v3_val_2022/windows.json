@@ -1,0 +1,2756 @@
+[
+  {
+    "origin": "2022-08-07 21:45:00+00:00",
+    "batch_id": "batch_8b846faf7e0dcfe6ef76",
+    "survival_rate": 0.97,
+    "confidence": 0.47629363024208243,
+    "uncertainty": 0.5089756389256882,
+    "status": "eligible_for_human_review",
+    "n_retained": 194,
+    "n_rejected": 6,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 5,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 14988.151584375,
+        "rmse": 19919.628550927617,
+        "bias": -7454.913973958336,
+        "n": 96,
+        "coverage": 0.84375,
+        "energy_error_wh": 178917.93537499942
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 104750.04472395832,
+        "rmse": 121653.59548726484,
+        "bias": -104750.04472395832,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 10089.332394791667,
+        "rmse": 14890.043092152728,
+        "bias": -3345.5524718750003,
+        "n": 96,
+        "energy_error_wh": 80293.25932499953
+      }
+    ],
+    "report_id": "conf_9b8258b594524bb0"
+  },
+  {
+    "origin": "2022-08-10 00:00:00+00:00",
+    "batch_id": "batch_b7350e67700ea7f00cb4",
+    "survival_rate": 0.95,
+    "confidence": 0.42902275720102695,
+    "uncertainty": 0.5483970976831295,
+    "status": "eligible_for_human_review",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 10
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 58776.54136354167,
+        "rmse": 77293.70771777195,
+        "bias": 53440.223371875,
+        "n": 96,
+        "coverage": 0.3333333333333333,
+        "energy_error_wh": 1282565.360925
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 36571.019821875,
+        "rmse": 45200.90831734046,
+        "bias": 2965.474038541665,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 76161.56565104167,
+        "rmse": 92221.34647957304,
+        "bias": 71905.29555520833,
+        "n": 96,
+        "energy_error_wh": 1725727.093325
+      }
+    ],
+    "report_id": "conf_fa4de3df10074b33"
+  },
+  {
+    "origin": "2022-08-12 02:00:00+00:00",
+    "batch_id": "batch_803af0dc30819319ce3f",
+    "survival_rate": 0.975,
+    "confidence": 0.5384230823893948,
+    "uncertainty": 0.44777119754933853,
+    "status": "eligible_for_human_review",
+    "n_retained": 195,
+    "n_rejected": 5,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 5
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 10221.974248958335,
+        "rmse": 12956.010266227771,
+        "bias": -9462.90566354167,
+        "n": 96,
+        "coverage": 0.9375,
+        "energy_error_wh": 227109.73592500016
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 54429.830232291664,
+        "rmse": 78595.76668299433,
+        "bias": 52772.771959374986,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 7988.77885416667,
+        "rmse": 10213.461197260718,
+        "bias": -7525.612327083335,
+        "n": 96,
+        "energy_error_wh": 180614.69585000025
+      }
+    ],
+    "report_id": "conf_cb107efce9eb49a9"
+  },
+  {
+    "origin": "2022-08-14 03:30:00+00:00",
+    "batch_id": "batch_42064ca1b3aae839efbc",
+    "survival_rate": 0.97,
+    "confidence": 0.5185894224344649,
+    "uncertainty": 0.4653717294490052,
+    "status": "eligible_for_human_review",
+    "n_retained": 194,
+    "n_rejected": 6,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 6
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 8438.319438541666,
+        "rmse": 10166.513365185836,
+        "bias": -7634.158544791669,
+        "n": 96,
+        "coverage": 0.90625,
+        "energy_error_wh": 183219.80507500004
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 56385.12137395834,
+        "rmse": 79917.95204699389,
+        "bias": 55963.307721875004,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 6432.5976635416655,
+        "rmse": 8564.244366671339,
+        "bias": -5867.496469791667,
+        "n": 96,
+        "energy_error_wh": 140819.9152750005
+      }
+    ],
+    "report_id": "conf_82c7c12cc0184531"
+  },
+  {
+    "origin": "2022-08-16 05:00:00+00:00",
+    "batch_id": "batch_05e406b67c721bfeabbd",
+    "survival_rate": 0.98,
+    "confidence": 0.5297489775586824,
+    "uncertainty": 0.459439818817671,
+    "status": "eligible_for_human_review",
+    "n_retained": 196,
+    "n_rejected": 4,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 4
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 11083.675620833334,
+        "rmse": 13646.368162778163,
+        "bias": -10578.146512500003,
+        "n": 96,
+        "coverage": 0.9270833333333334,
+        "energy_error_wh": 253875.51629999978
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 51597.83263541667,
+        "rmse": 73880.73535171128,
+        "bias": 47548.21710625,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 7091.83935625,
+        "rmse": 8989.45682272238,
+        "bias": -5398.28284375,
+        "n": 96,
+        "energy_error_wh": 129558.78825000022
+      }
+    ],
+    "report_id": "conf_0e8e561c312c45f4"
+  },
+  {
+    "origin": "2022-08-18 06:15:00+00:00",
+    "batch_id": "batch_c9a04bacb9050549b0e3",
+    "survival_rate": 0.97,
+    "confidence": 0.5306948286630416,
+    "uncertainty": 0.4528919292133591,
+    "status": "eligible_for_human_review",
+    "n_retained": 194,
+    "n_rejected": 6,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 6
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 7583.017838541666,
+        "rmse": 9638.699044289686,
+        "bias": -6962.581373958333,
+        "n": 96,
+        "coverage": 0.9166666666666666,
+        "energy_error_wh": 167101.95297500025
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 52104.261632291666,
+        "rmse": 63070.29140964896,
+        "bias": 12299.952696875,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 10684.497850000002,
+        "rmse": 12380.979639209429,
+        "bias": -10471.201314583335,
+        "n": 96,
+        "energy_error_wh": 251308.83155000024
+      }
+    ],
+    "report_id": "conf_5d5de52280ee468a"
+  },
+  {
+    "origin": "2022-08-20 07:15:00+00:00",
+    "batch_id": "batch_afafc7360931681d43d3",
+    "survival_rate": 0.965,
+    "confidence": 0.4929919734145677,
+    "uncertainty": 0.4891274886895671,
+    "status": "eligible_for_human_review",
+    "n_retained": 193,
+    "n_rejected": 7,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 7
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 10858.122428124998,
+        "rmse": 13335.714817994975,
+        "bias": -10268.921384374999,
+        "n": 96,
+        "coverage": 0.875,
+        "energy_error_wh": 246454.11322499998
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 58950.082517708324,
+        "rmse": 65244.09364936347,
+        "bias": -22498.727413541663,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 8459.06544375,
+        "rmse": 10467.312865793105,
+        "bias": -8258.932775,
+        "n": 96,
+        "energy_error_wh": 198214.38660000032
+      }
+    ],
+    "report_id": "conf_3a928e6a96714a5d"
+  },
+  {
+    "origin": "2022-08-22 08:15:00+00:00",
+    "batch_id": "batch_58eb0e1b38132051621d",
+    "survival_rate": 0.975,
+    "confidence": 0.509906458392053,
+    "uncertainty": 0.47701901703379174,
+    "status": "eligible_for_human_review",
+    "n_retained": 195,
+    "n_rejected": 5,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 5
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 18189.243769791665,
+        "rmse": 23009.35612513139,
+        "bias": -17951.164915625002,
+        "n": 96,
+        "coverage": 0.8020833333333334,
+        "energy_error_wh": 430827.95797500014
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 95344.31281979167,
+        "rmse": 110420.85297004126,
+        "bias": -88141.46211562499,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 11726.543169791665,
+        "rmse": 13615.22990594747,
+        "bias": -11539.400338541665,
+        "n": 96,
+        "energy_error_wh": 276945.60812500026
+      }
+    ],
+    "report_id": "conf_ba07cb1352cb43f2"
+  },
+  {
+    "origin": "2022-08-24 21:45:00+00:00",
+    "batch_id": "batch_ac474b75184bd3918a2b",
+    "survival_rate": 0.965,
+    "confidence": 0.49951079244514346,
+    "uncertainty": 0.4823722358081414,
+    "status": "eligible_for_human_review",
+    "n_retained": 193,
+    "n_rejected": 7,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 7
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 14590.371152083333,
+        "rmse": 18138.778519413536,
+        "bias": -12714.091177083334,
+        "n": 96,
+        "coverage": 0.8020833333333334,
+        "energy_error_wh": 305138.1882500001
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 112468.77952916664,
+        "rmse": 128345.46954081146,
+        "bias": -112446.8893,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 9805.841751041666,
+        "rmse": 12321.910024324074,
+        "bias": -6291.286009374999,
+        "n": 96,
+        "energy_error_wh": 150990.86422499968
+      }
+    ],
+    "report_id": "conf_97c35fb2cc764777"
+  },
+  {
+    "origin": "2022-08-26 22:45:00+00:00",
+    "batch_id": "batch_7eda191b0a0f4a562c12",
+    "survival_rate": 0.98,
+    "confidence": 0.5262703086795198,
+    "uncertainty": 0.46298948093926534,
+    "status": "eligible_for_human_review",
+    "n_retained": 196,
+    "n_rejected": 4,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 3,
+      "SOLAR_OVERSCALE": 1,
+      "GRID_EXPORT_LIMIT": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 35709.91268854167,
+        "rmse": 53834.74294055569,
+        "bias": 28095.037526041666,
+        "n": 96,
+        "coverage": 0.625,
+        "energy_error_wh": 674280.900625
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 52431.94510520834,
+        "rmse": 64123.635335689054,
+        "bias": -22209.385086458333,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 38362.63532916667,
+        "rmse": 58881.53522533379,
+        "bias": 32614.771725,
+        "n": 96,
+        "energy_error_wh": 782754.5214000002
+      }
+    ],
+    "report_id": "conf_920f8d821d4d4077"
+  },
+  {
+    "origin": "2022-08-28 23:45:00+00:00",
+    "batch_id": "batch_c1de851f2647d394f24c",
+    "survival_rate": 0.945,
+    "confidence": 0.5260193309647925,
+    "uncertainty": 0.4433657873388439,
+    "status": "eligible_for_human_review",
+    "n_retained": 189,
+    "n_rejected": 11,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 11
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 15018.755963541667,
+        "rmse": 22550.449027492697,
+        "bias": 8284.247621875002,
+        "n": 96,
+        "coverage": 0.9166666666666666,
+        "energy_error_wh": 198821.94292499963
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 52140.45434270833,
+        "rmse": 58698.97524137533,
+        "bias": -6089.448551041668,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 14443.570317708334,
+        "rmse": 21536.21312685622,
+        "bias": 12904.996413541667,
+        "n": 96,
+        "energy_error_wh": 309719.91392499954
+      }
+    ],
+    "report_id": "conf_e13c2e30b3c043f4"
+  },
+  {
+    "origin": "2022-08-31 00:45:00+00:00",
+    "batch_id": "batch_82ac3091ee1e92ce8185",
+    "survival_rate": 0.96,
+    "confidence": 0.46538013375310683,
+    "uncertainty": 0.5152290273405137,
+    "status": "eligible_for_human_review",
+    "n_retained": 192,
+    "n_rejected": 8,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 8
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 54894.02036250001,
+        "rmse": 68097.49227845157,
+        "bias": 49937.72839375,
+        "n": 96,
+        "coverage": 0.375,
+        "energy_error_wh": 1198505.48145
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 74943.28087291666,
+        "rmse": 81762.88578290984,
+        "bias": 63203.45975,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 68603.67539479166,
+        "rmse": 86273.55424422148,
+        "bias": 66409.844203125,
+        "n": 96,
+        "energy_error_wh": 1593836.260875
+      }
+    ],
+    "report_id": "conf_ffa07293a3b44e7a"
+  },
+  {
+    "origin": "2022-09-02 01:45:00+00:00",
+    "batch_id": "batch_db8922b380d55f0d7bf8",
+    "survival_rate": 0.93,
+    "confidence": 0.5288272418081157,
+    "uncertainty": 0.4313685571955745,
+    "status": "eligible_for_human_review",
+    "n_retained": 186,
+    "n_rejected": 14,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 12,
+      "SOLAR_OVERSCALE": 2
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 18913.795133333337,
+        "rmse": 29891.28603458273,
+        "bias": 2489.0530999999987,
+        "n": 96,
+        "coverage": 0.75,
+        "energy_error_wh": 59737.27440000046
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 74351.3771625,
+        "rmse": 98134.30695355232,
+        "bias": 71041.74601875,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 20724.690940625,
+        "rmse": 35009.85111126778,
+        "bias": 3541.380101041666,
+        "n": 96,
+        "energy_error_wh": 84993.12242500018
+      }
+    ],
+    "report_id": "conf_f6010c16d9ff43bc"
+  },
+  {
+    "origin": "2022-09-04 02:30:00+00:00",
+    "batch_id": "batch_2ed378f3be3828690405",
+    "survival_rate": 0.965,
+    "confidence": 0.4177008878931969,
+    "uncertainty": 0.5671493389707803,
+    "status": "eligible_for_human_review",
+    "n_retained": 193,
+    "n_rejected": 7,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 7
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 25813.557784374996,
+        "rmse": 33117.70270966885,
+        "bias": 3157.6457822916686,
+        "n": 96,
+        "coverage": 0.6666666666666666,
+        "energy_error_wh": 75783.49877499975
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 57178.09041354167,
+        "rmse": 68477.25719361877,
+        "bias": -24360.434378125003,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 33489.638851041665,
+        "rmse": 51984.418212819444,
+        "bias": 26411.730765625,
+        "n": 96,
+        "energy_error_wh": 633881.538375
+      }
+    ],
+    "report_id": "conf_6ab081d630334c33"
+  },
+  {
+    "origin": "2022-09-06 03:00:00+00:00",
+    "batch_id": "batch_a4627e563501ae0a118a",
+    "survival_rate": 0.945,
+    "confidence": 0.505651092665783,
+    "uncertainty": 0.46491947866054706,
+    "status": "eligible_for_human_review",
+    "n_retained": 189,
+    "n_rejected": 11,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 1,
+      "GRID_IMPORT_LIMIT": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 25550.461792708335,
+        "rmse": 35689.556602035875,
+        "bias": 11385.470030208335,
+        "n": 96,
+        "coverage": 0.71875,
+        "energy_error_wh": 273251.2807250004
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 56734.86495520833,
+        "rmse": 67435.36405767703,
+        "bias": 22711.301501041675,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 26960.628984375002,
+        "rmse": 41435.6470776997,
+        "bias": 19999.250532291666,
+        "n": 96,
+        "energy_error_wh": 479982.0127750002
+      }
+    ],
+    "report_id": "conf_8f077456bd31484d"
+  },
+  {
+    "origin": "2022-09-08 03:30:00+00:00",
+    "batch_id": "batch_fa1b56515cf3d94d5e42",
+    "survival_rate": 0.935,
+    "confidence": 0.5546653407578575,
+    "uncertainty": 0.40677503662261244,
+    "status": "eligible_for_human_review",
+    "n_retained": 187,
+    "n_rejected": 13,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 12,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 33687.77091979166,
+        "rmse": 56715.94075412249,
+        "bias": 29024.394134375,
+        "n": 96,
+        "coverage": 0.6458333333333334,
+        "energy_error_wh": 696585.4592249999
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 101772.92021770834,
+        "rmse": 120614.1168839492,
+        "bias": 101764.19039062502,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 35039.81595520833,
+        "rmse": 60254.43320295553,
+        "bias": 27782.540398958332,
+        "n": 96,
+        "energy_error_wh": 666780.969575
+      }
+    ],
+    "report_id": "conf_b2472330a61744cd"
+  },
+  {
+    "origin": "2022-09-10 04:00:00+00:00",
+    "batch_id": "batch_1531eb7e33c2f8c999e1",
+    "survival_rate": 0.955,
+    "confidence": 0.2580064165995944,
+    "uncertainty": 0.7298362129847179,
+    "status": "reduced_confidence",
+    "n_retained": 191,
+    "n_rejected": 9,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 8,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 25837.159271875,
+        "rmse": 31695.876620574145,
+        "bias": -11884.32043645833,
+        "n": 96,
+        "coverage": 0.7395833333333334,
+        "energy_error_wh": 285223.69047500007
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 72622.50924479165,
+        "rmse": 91042.02482919375,
+        "bias": -55574.21211770834,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 28287.367198958334,
+        "rmse": 48689.81734851137,
+        "bias": 25947.652267708338,
+        "n": 96,
+        "energy_error_wh": 622743.6544250003
+      }
+    ],
+    "report_id": "conf_f2bf87e22e414079"
+  },
+  {
+    "origin": "2022-09-12 04:30:00+00:00",
+    "batch_id": "batch_62d8213041b4d0a8cfcd",
+    "survival_rate": 0.95,
+    "confidence": 0.511975207919705,
+    "uncertainty": 0.46107872850557374,
+    "status": "eligible_for_human_review",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 8,
+      "SOLAR_OVERSCALE": 2
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 5125.197002083332,
+        "rmse": 7792.187933262862,
+        "bias": -1767.0303104166667,
+        "n": 96,
+        "coverage": 0.9583333333333334,
+        "energy_error_wh": 42408.72745000012
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 61586.10837083333,
+        "rmse": 84214.69276412013,
+        "bias": 61539.880597916665,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 8182.016291666666,
+        "rmse": 10994.375997833702,
+        "bias": 861.7782541666655,
+        "n": 96,
+        "energy_error_wh": 20682.678100000136
+      }
+    ],
+    "report_id": "conf_c8bb84909855444a"
+  },
+  {
+    "origin": "2022-09-14 05:00:00+00:00",
+    "batch_id": "batch_3d51ae6be8fd1280ff1c",
+    "survival_rate": 0.955,
+    "confidence": 0.5007608244372245,
+    "uncertainty": 0.47564311577253976,
+    "status": "eligible_for_human_review",
+    "n_retained": 191,
+    "n_rejected": 9,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 11087.443460416669,
+        "rmse": 13946.737555006843,
+        "bias": -8734.068695833334,
+        "n": 96,
+        "coverage": 0.9270833333333334,
+        "energy_error_wh": 209617.6486999998
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 51587.229179166665,
+        "rmse": 68157.3755182258,
+        "bias": 30460.791060416665,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 7039.337010416667,
+        "rmse": 8697.51811721606,
+        "bias": -1166.5227833333338,
+        "n": 96,
+        "energy_error_wh": 27996.54679999966
+      }
+    ],
+    "report_id": "conf_39fa5eb5667c4142"
+  },
+  {
+    "origin": "2022-09-16 05:30:00+00:00",
+    "batch_id": "batch_d3e0b7cd537358e78c33",
+    "survival_rate": 0.95,
+    "confidence": 0.4882891320143871,
+    "uncertainty": 0.48601143998485563,
+    "status": "eligible_for_human_review",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 13292.518339583332,
+        "rmse": 16768.16505725636,
+        "bias": -12920.01923125,
+        "n": 96,
+        "coverage": 0.9375,
+        "energy_error_wh": 310080.46154999966
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 50857.617375,
+        "rmse": 69626.22360855802,
+        "bias": 34988.86353333333,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 7578.678741666667,
+        "rmse": 9348.074463497187,
+        "bias": -4936.092262499999,
+        "n": 96,
+        "energy_error_wh": 118466.21429999964
+      }
+    ],
+    "report_id": "conf_3871a4613b2046de"
+  },
+  {
+    "origin": "2022-09-18 06:00:00+00:00",
+    "batch_id": "batch_eef1cb1affe266675fe5",
+    "survival_rate": 0.975,
+    "confidence": 0.518074978402963,
+    "uncertainty": 0.4686410477918328,
+    "status": "eligible_for_human_review",
+    "n_retained": 195,
+    "n_rejected": 5,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 4,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 14144.728019791664,
+        "rmse": 25579.960028207966,
+        "bias": 10938.097173958333,
+        "n": 96,
+        "coverage": 0.8958333333333334,
+        "energy_error_wh": 262514.3321750001
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 53997.07853229167,
+        "rmse": 69691.82013855853,
+        "bias": 38246.642734375004,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 18977.268463541666,
+        "rmse": 30620.2150798471,
+        "bias": 14003.600744791669,
+        "n": 96,
+        "energy_error_wh": 336086.4178749998
+      }
+    ],
+    "report_id": "conf_4c7be9b4357349b3"
+  },
+  {
+    "origin": "2022-09-20 06:00:00+00:00",
+    "batch_id": "batch_63ddf8bd2aeb5c40b219",
+    "survival_rate": 0.965,
+    "confidence": 0.3639498172201573,
+    "uncertainty": 0.6228499303418059,
+    "status": "reduced_confidence",
+    "n_retained": 193,
+    "n_rejected": 7,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 5,
+      "SOLAR_OVERSCALE": 2
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 20102.205715624998,
+        "rmse": 25772.704172025355,
+        "bias": -19796.40409270833,
+        "n": 96,
+        "coverage": 0.8854166666666666,
+        "energy_error_wh": 475113.69822499994
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 80853.09380520834,
+        "rmse": 93872.90697831872,
+        "bias": -68481.78833854168,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 9727.399941666668,
+        "rmse": 14783.882905120545,
+        "bias": 667.7678333333337,
+        "n": 96,
+        "energy_error_wh": 16026.42799999984
+      }
+    ],
+    "report_id": "conf_0d8c089e9da84178"
+  },
+  {
+    "origin": "2022-09-22 06:00:00+00:00",
+    "batch_id": "batch_09ed13709542f7c66f1c",
+    "survival_rate": 0.95,
+    "confidence": 0.5187204060438474,
+    "uncertainty": 0.45397851995384486,
+    "status": "eligible_for_human_review",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 10
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 6451.5714927083345,
+        "rmse": 9177.88015497662,
+        "bias": -4975.733709374998,
+        "n": 96,
+        "coverage": 0.96875,
+        "energy_error_wh": 119417.60902499966
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 51098.648803125,
+        "rmse": 65449.00730543914,
+        "bias": 24249.290634374993,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 6944.677540624999,
+        "rmse": 8248.049268450588,
+        "bias": -775.862521874999,
+        "n": 96,
+        "energy_error_wh": 18620.700525000226
+      }
+    ],
+    "report_id": "conf_924aba4086404b27"
+  },
+  {
+    "origin": "2022-09-24 06:00:00+00:00",
+    "batch_id": "batch_3dde8994e6f4624345fb",
+    "survival_rate": 0.955,
+    "confidence": 0.5194844221983957,
+    "uncertainty": 0.4560372542425175,
+    "status": "eligible_for_human_review",
+    "n_retained": 191,
+    "n_rejected": 9,
+    "constraint_counts": {
+      "SOLAR_OVERSCALE": 5,
+      "GRID_EXPORT_LIMIT": 1,
+      "SOLAR_RAMP_LIMIT": 5
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 62940.621881249994,
+        "rmse": 78263.50190408589,
+        "bias": 61876.10375625,
+        "n": 96,
+        "coverage": 0.375,
+        "energy_error_wh": 1485026.49015
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 94673.21970208333,
+        "rmse": 102870.74992451066,
+        "bias": 94003.3837625,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 72007.20212916668,
+        "rmse": 91143.33747819113,
+        "bias": 70138.30189374999,
+        "n": 96,
+        "energy_error_wh": 1683319.2454499998
+      }
+    ],
+    "report_id": "conf_23e6b3b92dcd405c"
+  },
+  {
+    "origin": "2022-09-26 06:00:00+00:00",
+    "batch_id": "batch_4ebeacb2cc59f4bd0ff7",
+    "survival_rate": 0.945,
+    "confidence": 0.17907944346632185,
+    "uncertainty": 0.8104979434218816,
+    "status": "reduced_confidence",
+    "n_retained": 189,
+    "n_rejected": 11,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 2
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 25809.378309375,
+        "rmse": 32445.988247805566,
+        "bias": -4130.609361458333,
+        "n": 96,
+        "coverage": 0.75,
+        "energy_error_wh": 99134.62467500009
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 72769.17910729167,
+        "rmse": 98539.3605262749,
+        "bias": -69278.50961979166,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 38883.10061145833,
+        "rmse": 61767.33011517718,
+        "bias": 35206.106765625,
+        "n": 96,
+        "energy_error_wh": 844946.5623749997
+      }
+    ],
+    "report_id": "conf_89db29fd6cca4825"
+  },
+  {
+    "origin": "2022-09-28 05:30:00+00:00",
+    "batch_id": "batch_abae7b761bd5568489d3",
+    "survival_rate": 0.925,
+    "confidence": 0.501545979042755,
+    "uncertainty": 0.4577881307645892,
+    "status": "eligible_for_human_review",
+    "n_retained": 185,
+    "n_rejected": 15,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 12,
+      "GRID_IMPORT_LIMIT": 1,
+      "SOLAR_OVERSCALE": 2
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 9293.479715624999,
+        "rmse": 11617.639334181373,
+        "bias": -5399.610326041667,
+        "n": 96,
+        "coverage": 0.8958333333333334,
+        "energy_error_wh": 129590.64782499988
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 54407.60771354166,
+        "rmse": 74486.68513143685,
+        "bias": 40348.354384375,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 10769.403656249999,
+        "rmse": 14211.473676501477,
+        "bias": 419.91990208333374,
+        "n": 96,
+        "energy_error_wh": 10078.077650000341
+      }
+    ],
+    "report_id": "conf_40c45d37b5e54dc6"
+  },
+  {
+    "origin": "2022-09-30 05:00:00+00:00",
+    "batch_id": "batch_a461edd80401c5efa2de",
+    "survival_rate": 0.96,
+    "confidence": 0.5134392524584668,
+    "uncertainty": 0.46516744535576365,
+    "status": "eligible_for_human_review",
+    "n_retained": 192,
+    "n_rejected": 8,
+    "constraint_counts": {
+      "SOLAR_OVERSCALE": 2,
+      "SOLAR_RAMP_LIMIT": 6
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 54710.620751041664,
+        "rmse": 65487.411597446655,
+        "bias": 54572.54931770833,
+        "n": 96,
+        "coverage": 0.3958333333333333,
+        "energy_error_wh": 1309741.1836249998
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 103318.52606562497,
+        "rmse": 109275.25194091588,
+        "bias": 103318.52606562497,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 65592.85051041665,
+        "rmse": 79593.07612792919,
+        "bias": 65457.01217083333,
+        "n": 96,
+        "energy_error_wh": 1570968.2921
+      }
+    ],
+    "report_id": "conf_290b6edd04f148b6"
+  },
+  {
+    "origin": "2022-10-02 04:30:00+00:00",
+    "batch_id": "batch_b4ce41c72e798bb6e068",
+    "survival_rate": 0.95,
+    "confidence": 0.28809586873753534,
+    "uncertainty": 0.6967411908025943,
+    "status": "reduced_confidence",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_OVERSCALE": 5,
+      "SOLAR_RAMP_LIMIT": 5
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 27702.432028124997,
+        "rmse": 37113.43503370354,
+        "bias": 12477.150628124999,
+        "n": 96,
+        "coverage": 0.7708333333333334,
+        "energy_error_wh": 299451.6150750001
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 47745.32814895833,
+        "rmse": 56365.5145354232,
+        "bias": -9408.775348958332,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 45174.29430625,
+        "rmse": 59758.28175195179,
+        "bias": 44674.66552708333,
+        "n": 96,
+        "energy_error_wh": 1072191.97265
+      }
+    ],
+    "report_id": "conf_cffd5d385461440e"
+  },
+  {
+    "origin": "2022-10-04 03:30:00+00:00",
+    "batch_id": "batch_a4c81e15a715a0532ea5",
+    "survival_rate": 0.93,
+    "confidence": 0.47279629182179406,
+    "uncertainty": 0.49161689051419993,
+    "status": "eligible_for_human_review",
+    "n_retained": 186,
+    "n_rejected": 14,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 10,
+      "SOLAR_OVERSCALE": 4
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 18517.856585416666,
+        "rmse": 23256.544720413644,
+        "bias": -5637.766875,
+        "n": 96,
+        "coverage": 0.90625,
+        "energy_error_wh": 135306.4049999998
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 57587.124393750004,
+        "rmse": 71767.40847463047,
+        "bias": 37367.05470208334,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 16510.773155208335,
+        "rmse": 24719.852827352835,
+        "bias": 10798.249432291668,
+        "n": 96,
+        "energy_error_wh": 259157.98637499986
+      }
+    ],
+    "report_id": "conf_cdf37d81171f45d0"
+  },
+  {
+    "origin": "2022-10-06 02:30:00+00:00",
+    "batch_id": "batch_75d136dbdf120df80374",
+    "survival_rate": 0.915,
+    "confidence": 0.50271614689922,
+    "uncertainty": 0.4505834460117815,
+    "status": "eligible_for_human_review",
+    "n_retained": 183,
+    "n_rejected": 17,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 13,
+      "SOLAR_OVERSCALE": 4
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 16349.229564583336,
+        "rmse": 22139.93192848865,
+        "bias": 7010.659035416666,
+        "n": 96,
+        "coverage": 0.8958333333333334,
+        "energy_error_wh": 168255.8168499996
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 83630.57611666668,
+        "rmse": 107555.07234048122,
+        "bias": 83107.04217916667,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 14677.036855208333,
+        "rmse": 20210.172046463438,
+        "bias": 12985.710698958334,
+        "n": 96,
+        "energy_error_wh": 311657.05677499995
+      }
+    ],
+    "report_id": "conf_418d32d71f1f4d27"
+  },
+  {
+    "origin": "2022-10-08 01:30:00+00:00",
+    "batch_id": "batch_de8f21e1edaa7d63b865",
+    "survival_rate": 0.95,
+    "confidence": 0.5460690701962413,
+    "uncertainty": 0.4251904524250092,
+    "status": "eligible_for_human_review",
+    "n_retained": 190,
+    "n_rejected": 10,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 6493.831991666666,
+        "rmse": 8774.198535262272,
+        "bias": -6212.058472916666,
+        "n": 96,
+        "coverage": 0.96875,
+        "energy_error_wh": 149089.4033499998
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 67809.41924375,
+        "rmse": 92056.46565329451,
+        "bias": 63814.36264791666,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 6233.070491666668,
+        "rmse": 7796.615699253448,
+        "bias": -3785.05433125,
+        "n": 96,
+        "energy_error_wh": 90841.30394999962
+      }
+    ],
+    "report_id": "conf_cbefb7d47f55461e"
+  },
+  {
+    "origin": "2022-10-10 00:30:00+00:00",
+    "batch_id": "batch_a1a78a1c8973510137f1",
+    "survival_rate": 0.905,
+    "confidence": 0.5023109034916028,
+    "uncertainty": 0.4449603276335881,
+    "status": "eligible_for_human_review",
+    "n_retained": 181,
+    "n_rejected": 19,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 13,
+      "SOLAR_OVERSCALE": 6
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 18229.572959375,
+        "rmse": 28349.556416333264,
+        "bias": 15643.53871145833,
+        "n": 96,
+        "coverage": 0.8645833333333334,
+        "energy_error_wh": 375444.9290749999
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 69762.500596875,
+        "rmse": 86960.56421143211,
+        "bias": 62016.72736562501,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 23745.007548958336,
+        "rmse": 35924.042544613105,
+        "bias": 20778.30902604167,
+        "n": 96,
+        "energy_error_wh": 498679.4166249996
+      }
+    ],
+    "report_id": "conf_e3e1f47b57314524"
+  },
+  {
+    "origin": "2022-10-11 23:30:00+00:00",
+    "batch_id": "batch_64c6f7be21dd228ca0e5",
+    "survival_rate": 0.925,
+    "confidence": 0.4926268394466655,
+    "uncertainty": 0.4674304438414428,
+    "status": "eligible_for_human_review",
+    "n_retained": 185,
+    "n_rejected": 15,
+    "constraint_counts": {
+      "SOLAR_OVERSCALE": 9,
+      "SOLAR_RAMP_LIMIT": 6,
+      "GRID_EXPORT_LIMIT": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 21012.347648958334,
+        "rmse": 32767.863481265635,
+        "bias": 17422.674611458333,
+        "n": 96,
+        "coverage": 0.84375,
+        "energy_error_wh": 418144.19067500066
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 57246.87020104167,
+        "rmse": 67550.59326441762,
+        "bias": 29692.050023958338,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 29324.509718750003,
+        "rmse": 43351.048599235604,
+        "bias": 28181.7577625,
+        "n": 96,
+        "energy_error_wh": 676362.1863000002
+      }
+    ],
+    "report_id": "conf_6df9eeb325544ed9"
+  },
+  {
+    "origin": "2022-10-13 22:30:00+00:00",
+    "batch_id": "batch_267c520f0ac4d95fb915",
+    "survival_rate": 0.9,
+    "confidence": 0.4823573371752003,
+    "uncertainty": 0.4640474031386663,
+    "status": "eligible_for_human_review",
+    "n_retained": 180,
+    "n_rejected": 20,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 14,
+      "SOLAR_OVERSCALE": 6
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 11446.669807291668,
+        "rmse": 17207.80269030855,
+        "bias": 2748.7908281250006,
+        "n": 96,
+        "coverage": 0.9479166666666666,
+        "energy_error_wh": 65970.9798750002
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 69682.49414270832,
+        "rmse": 77968.702025291,
+        "bias": -47373.137640625006,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 13323.276648958335,
+        "rmse": 20775.55671958266,
+        "bias": 10461.715130208335,
+        "n": 96,
+        "energy_error_wh": 251081.16312499996
+      }
+    ],
+    "report_id": "conf_22ecdd9cbce04bf8"
+  },
+  {
+    "origin": "2022-10-15 21:30:00+00:00",
+    "batch_id": "batch_60aaaa9086609d888a4e",
+    "survival_rate": 0.91,
+    "confidence": 0.4429205893008685,
+    "uncertainty": 0.5132740776913534,
+    "status": "eligible_for_human_review",
+    "n_retained": 182,
+    "n_rejected": 18,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 13,
+      "SOLAR_OVERSCALE": 5,
+      "GRID_EXPORT_LIMIT": 1
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 22552.176465625,
+        "rmse": 29735.57795650002,
+        "bias": 826.134390625001,
+        "n": 96,
+        "coverage": 0.8125,
+        "energy_error_wh": 19827.22537499992
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 94629.34518020833,
+        "rmse": 111416.62660927145,
+        "bias": -90379.54850104166,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 21655.65638229167,
+        "rmse": 33096.143435464306,
+        "bias": 18148.789740625,
+        "n": 96,
+        "energy_error_wh": 435570.9537750003
+      }
+    ],
+    "report_id": "conf_a4f932eceba54dc5"
+  },
+  {
+    "origin": "2022-10-17 09:00:00+00:00",
+    "batch_id": "batch_fc711a5401cd506ac188",
+    "survival_rate": 0.94,
+    "confidence": 0.21713130051413057,
+    "uncertainty": 0.7690092547722015,
+    "status": "reduced_confidence",
+    "n_retained": 188,
+    "n_rejected": 12,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 3
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 34911.25186354167,
+        "rmse": 45030.48898913867,
+        "bias": -34493.885282291674,
+        "n": 96,
+        "coverage": 0.8854166666666666,
+        "energy_error_wh": 827853.2467749999
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 113632.94409479166,
+        "rmse": 129220.20343417932,
+        "bias": -113632.94409479166,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 14006.499170833333,
+        "rmse": 23640.976031835595,
+        "bias": 8975.742714583332,
+        "n": 96,
+        "energy_error_wh": 215417.82514999993
+      }
+    ],
+    "report_id": "conf_d5a2a8a6c5254dc5"
+  },
+  {
+    "origin": "2022-10-19 07:45:00+00:00",
+    "batch_id": "batch_d55c7c0f72acf73d56a8",
+    "survival_rate": 0.915,
+    "confidence": 0.4661935380990927,
+    "uncertainty": 0.4904988654654725,
+    "status": "eligible_for_human_review",
+    "n_retained": 183,
+    "n_rejected": 17,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 8
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 6242.398772916666,
+        "rmse": 8222.628246279945,
+        "bias": -4806.289974999999,
+        "n": 96,
+        "coverage": 0.9895833333333334,
+        "energy_error_wh": 115350.95940000005
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 73436.58887708333,
+        "rmse": 81420.51380382234,
+        "bias": -49897.44025208333,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 8189.889828125,
+        "rmse": 10501.511818838359,
+        "bias": 4117.112003124999,
+        "n": 96,
+        "energy_error_wh": 98810.68807500042
+      }
+    ],
+    "report_id": "conf_3ccddbaa20374eae"
+  },
+  {
+    "origin": "2022-10-21 06:15:00+00:00",
+    "batch_id": "batch_a8abb66fb379a3db7f97",
+    "survival_rate": 0.905,
+    "confidence": 0.4196142170020894,
+    "uncertainty": 0.5363378817656471,
+    "status": "eligible_for_human_review",
+    "n_retained": 181,
+    "n_rejected": 19,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 14,
+      "SOLAR_OVERSCALE": 5
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 15834.019625,
+        "rmse": 22899.05930422598,
+        "bias": 4474.359639583335,
+        "n": 96,
+        "coverage": 0.8854166666666666,
+        "energy_error_wh": 107384.63134999992
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 58695.130462500005,
+        "rmse": 70811.71905619382,
+        "bias": 33453.72988333333,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 22003.732984375005,
+        "rmse": 30580.725859783506,
+        "bias": 20602.04505520833,
+        "n": 96,
+        "energy_error_wh": 494449.0813249997
+      }
+    ],
+    "report_id": "conf_b73e85a140954e94"
+  },
+  {
+    "origin": "2022-10-23 04:45:00+00:00",
+    "batch_id": "batch_3d3db4a2ba47f7d12c99",
+    "survival_rate": 0.855,
+    "confidence": 0.4581574876826008,
+    "uncertainty": 0.464143289260116,
+    "status": "eligible_for_human_review",
+    "n_retained": 171,
+    "n_rejected": 29,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 18,
+      "SOLAR_OVERSCALE": 11
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 8824.934860416664,
+        "rmse": 12488.202913714653,
+        "bias": -320.4549500000001,
+        "n": 96,
+        "coverage": 0.9166666666666666,
+        "energy_error_wh": 7690.918800000101
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 65470.86135208333,
+        "rmse": 87123.97066016126,
+        "bias": 59951.323735416656,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 10431.982538541666,
+        "rmse": 15968.730971515975,
+        "bias": 7846.349742708332,
+        "n": 96,
+        "energy_error_wh": 188312.39382500015
+      }
+    ],
+    "report_id": "conf_4adbb22c7c514b4e"
+  },
+  {
+    "origin": "2022-10-25 03:15:00+00:00",
+    "batch_id": "batch_c20460703182b8f6984c",
+    "survival_rate": 0.91,
+    "confidence": 0.49066221915155817,
+    "uncertainty": 0.4608107481851009,
+    "status": "eligible_for_human_review",
+    "n_retained": 182,
+    "n_rejected": 18,
+    "constraint_counts": {
+      "SOLAR_RAMP_LIMIT": 9,
+      "SOLAR_OVERSCALE": 9
+    },
+    "metrics": {
+      "solar_w": {
+        "mae": 24503.23328854167,
+        "rmse": 38186.12969817957,
+        "bias": 6410.959773958333,
+        "n": 96,
+        "coverage": 0.78125,
+        "energy_error_wh": 153863.03457499994
+      },
+      "load_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "soc_percent": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "grid_w": {
+        "mae": null,
+        "rmse": null,
+        "bias": null,
+        "n": 0,
+        "coverage": null,
+        "energy_error_wh": null
+      },
+      "n_steps": 96
+    },
+    "baselines": [
+      {
+        "target": "solar_w",
+        "model": "persistence_origin",
+        "mae": 62887.491863541676,
+        "rmse": 76746.66628357465,
+        "bias": 43369.143817708355,
+        "n": 96
+      },
+      {
+        "target": "solar_w",
+        "model": "clear_sky_naive",
+        "mae": 24967.730412499997,
+        "rmse": 46197.296016795575,
+        "bias": 22020.61706666667,
+        "n": 96,
+        "energy_error_wh": 528494.8096000003
+      }
+    ],
+    "report_id": "conf_4c254ac605c6451f"
+  }
+]

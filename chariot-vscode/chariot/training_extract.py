@@ -111,6 +111,7 @@ def build_training_extract(
     validate_frac: float = 0.20,
     test_frac: float = 0.20,
     created_by: str = "system",
+    honour_split: bool = False,
 ) -> dict[str, Any]:
     """Build the materialized training extract.
 
@@ -181,12 +182,31 @@ def build_training_extract(
     out["train_gate_codes"] = codes
     out["is_trainable"] = [len(c) == 0 for c in codes]
 
-    out["split"] = assign_splits(
-        out,
-        train_frac=train_frac,
-        validate_frac=validate_frac,
-        test_frac=test_frac,
-    )
+    if honour_split and "split" in frame.columns:
+        # The 2022 -> 2023 protocol assigns the split *upstream* (train and
+        # validate live in 2022, the report-only test lives in 2023), so the
+        # chronological re-split must be skipped.  The assignment is opt-in:
+        # with the default the behaviour is bit-identical to v3.
+        pre = frame["split"].astype(str).str.strip().str.lower()
+        if pre.isin(["train", "validate", "test"]).all():
+            out["split"] = pre.to_numpy()
+            split_policy = "pre_assigned (upstream protocol)"
+        else:  # pragma: no cover - defensive
+            out["split"] = assign_splits(
+                out,
+                train_frac=train_frac,
+                validate_frac=validate_frac,
+                test_frac=test_frac,
+            )
+            split_policy = "time_ordered_60_20_20"
+    else:
+        out["split"] = assign_splits(
+            out,
+            train_frac=train_frac,
+            validate_frac=validate_frac,
+            test_frac=test_frac,
+        )
+        split_policy = "time_ordered_60_20_20"
 
     out["calibration_version"] = calibration_version or "calibration_identity_v1"
     out["capacity_factor"] = float(calibration_factors.get("capacity_factor", 1.0))
@@ -228,7 +248,7 @@ def build_training_extract(
         "path": str(path),
         "time_start": str(out["timestamp_utc"].min()),
         "time_end": str(out["timestamp_utc"].max()),
-        "split_policy": "time_ordered_60_20_20",
+        "split_policy": split_policy,
         "split_fractions": {
             "train": train_frac,
             "validate": validate_frac,

@@ -152,6 +152,15 @@ class PipelineConfig:
     horizon: str = "operational"
     train_frac: float = 0.60
     validate_frac: float = 0.20
+    #: Honour a split that was assigned upstream (the 2022 -> 2023 protocol:
+    #: train and validate in 2022, the report-only test in 2023).  Off by
+    #: default, so the v3 behaviour is unchanged.
+    honour_split: bool = False
+    #: Which split the rolling-origin evaluation windows are drawn from.
+    #: "test" (default) keeps the v3 behaviour; "validate" is used for the
+    #: 2022 selection metrics of the 2022 -> 2023 protocol.  The model is
+    #: always fitted on the train split only.
+    evaluate_split: str = "test"
     #: Calibrate the ensemble spread on the validation split.
     calibrate_spread: bool = True
     spread_windows: int = 6
@@ -293,6 +302,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
         validate_frac=config.validate_frac,
         test_frac=config.test_frac,
         created_by="pipeline",
+        honour_split=config.honour_split,
     )
     dataset = load_dataset(store, manifest["dataset_version"])
 
@@ -300,6 +310,15 @@ def run(config: PipelineConfig) -> dict[str, Any]:
     train = dataset.loc[(dataset["split"] == "train") & dataset["is_trainable"]].reset_index(drop=True)
     validate = dataset.loc[(dataset["split"] == "validate") & dataset["is_trainable"]].reset_index(drop=True)
     test = dataset.loc[(dataset["split"] == "test") & dataset["is_trainable"]].reset_index(drop=True)
+    # The evaluation frames are drawn from ``evaluate_split``; the default
+    # ("test") reproduces the v3 behaviour bit for bit.
+    eval_frame = (
+        test
+        if config.evaluate_split == "test"
+        else dataset.loc[
+            (dataset["split"] == config.evaluate_split) & dataset["is_trainable"]
+        ].reset_index(drop=True)
+    )
 
     model = fit_model(
         train,
@@ -363,7 +382,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
 
     # ------------------------------------------------------ rolling origins
     history = dataset.sort_values("timestamp_utc").reset_index(drop=True)
-    windows = _plan_windows(test, HORIZONS[config.horizon], config.max_windows)
+    windows = _plan_windows(eval_frame, HORIZONS[config.horizon], config.max_windows)
 
     results: list[dict[str, Any]] = []
     for idx, (origin_label, future, actual) in enumerate(windows):
@@ -556,7 +575,11 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             "status_counts": summary["status_counts"],
             "policy_version": CONFIDENCE_POLICY.policy_version,
         },
-        "evaluation": summary["evaluation"],
+        "evaluation": {
+            "split": config.evaluate_split,
+            "n_windows": summary["evaluation"].get("solar_w", {}).get("n_windows"),
+            **summary["evaluation"],
+        },
         "windows": len(results),
         "store_path": str(config.store_path),
     }
@@ -942,10 +965,19 @@ def _summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     for r in results:
         for row in r.get("baselines", []):
             key = f"{row['model']}"
-            baselines.setdefault(key, []).append(row.get("mae"))
-    baseline_summary = {
-        k: {"mae_mean": float(np.nanmean(v))} for k, v in baselines.items() if v
-    }
+            baselines.setdefault(key, []).append(row)
+    baseline_summary: dict[str, Any] = {}
+    for key, rows in baselines.items():
+        if not rows:
+            continue
+        entry: dict[str, Any] = {
+            "mae_mean": float(np.nanmean([r.get("mae", np.nan) for r in rows]))
+        }
+        for field in ("rmse", "bias", "coverage", "energy_error_wh"):
+            values = [r.get(field) for r in rows if r.get(field) is not None]
+            if values and np.isfinite(np.asarray(values, dtype=float)).any():
+                entry[f"{field}_mean"] = float(np.nanmean(values))
+        baseline_summary[key] = entry
     return {
         "n_windows": len(results),
         "mean_survival_rate": float(np.mean(survival)),

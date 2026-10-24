@@ -243,7 +243,67 @@ Rules the script obeys:
   DSM/CERC readiness claim. It models the *clearness* channel only, on a
   solar-only site whose load and battery are declared engineering assumptions.
 
-## 9. What this repository is not
+## 9. The 2022 → 2023 evaluation protocol (W1)
+
+The operational question CHARIOT has to answer is *does the model still work on a
+year it has never seen?* The original v3 evaluation answered it with a
+chronological 60/20/20 split **inside 2022**, so the "test" year was only ten
+weeks long and the training window started in December 2021 (a summer month in
+the southern hemisphere — a seasonal artefact in the fit).
+
+The `year2022_2023` protocol replaces it:
+
+| split | window | use |
+| --- | --- | --- |
+| `train_2022` | 2022-01-01 → 2022-08-07 (first 60 % of 2022) | fitting only |
+| `validate_2022` | 2022-08-07 → 2022-12-31 (remaining 40 % of 2022) | selection only |
+| `test_2023` | 2023-01-01 → 2023-12-31 (whole year) | **report only** — never fitted, never selected on |
+
+```bash
+# 1. build the slices, the manifest (content hashes + exact boundaries) and the QC
+python scripts/prepare_dataset.py --protocol year2022_2023 \
+    --source  <dka_alice_springs_solar_only_15min_2022.csv> \
+    --source-test <dka_alice_springs_solar_only_15min_2023.csv>
+
+# 2. run the ops spine on the protocol (the model is fitted on 2022 train only)
+python scripts/run_chariot3.py \
+    --source var/data/dka_alice_springs_2022_2023.parquet \
+    --start 2022-01-01 --end 2024-01-01 \
+    --honour-split --out runs/w1_ops_v3_protocol_2022_2023
+
+# 3. the 2022 selection metrics (the gate every later stage is judged on)
+python scripts/run_chariot3.py --source var/data/dka_alice_springs_2022_2023.parquet \
+    --start 2022-01-01 --end 2024-01-01 --honour-split --evaluate-split validate \
+    --out runs/w1_ops_v3_val_2022
+
+# 4. the stage report
+python scripts/build_w1_report.py
+```
+
+`--honour-split` tells the training extract to keep the split that was assigned
+upstream instead of re-splitting chronologically; `--evaluate-split` chooses
+which split the rolling-origin windows are drawn from. Both default to the v3
+behaviour, so the existing spine and its tests are untouched.
+
+**Measured QC (both years).** Strict 15-minute cadence, 0 duplicate timestamps,
+night solar exactly 0 W, clear-sky ≠ measurement in every slice. Daylight
+clearness above 1.05×: **27.68 %** (train_2022), **22.45 %** (validate_2022),
+**18.85 %** (test_2023); above 1.20×: 5.20 %, 4.97 %, 1.29 %. The 2022 and 2023
+exports do **not** share a clear-sky geometry (15° vs 17.5° tilt), so the
+year-over-year clearness shift is a *reference* artefact — W2's entry point.
+
+**Ops baseline on the protocol** (v3 spine unchanged, 40 rolling windows,
+200 scenarios/window):
+
+| window | MAE (W) | RMSE (W) | bias (W) | coverage | survival |
+| --- | --- | --- | --- | --- | --- |
+| 2022 validate (selection) | 21,143 | 28,568 | +4,403 | 0.806 | 0.944 |
+| 2023 test (report only) | 17,163 | 23,223 | +3,218 | 0.888 | 0.906 |
+
+Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
+20,304 W (2023 test); persistence-at-origin 69,054 W and 68,234 W.
+
+## 10. What this repository is not
 
 - Not a controller. No setpoints, no dispatch, no closed loop.
 - Not a financial guarantee. Investor/Government mode is a probabilistic planning view.
@@ -253,7 +313,26 @@ Rules the script obeys:
   `baselines.py`, `synthetic.py`) and their run artefacts were superseded by v3 and
   removed; the history remains in git.
 
-## 10. License / attribution
+## 11. Changelog (improvement programme W1 → W7)
+
+The operational default is the **versioned NumPy clearness SSM**
+(`chariot/model.py`). Every model change bumps the model version, and a stage
+is only promoted if it passes its gate on the **2022 validation** window. The
+2023 window is report-only.
+
+| stage | what landed | model version | gate |
+| --- | --- | --- | --- |
+| W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
+| W2 | clear-sky upgrade | — | pending |
+| W3 | ops bias / hour-elevation calibration | — | pending |
+| W4 | constrained residual chamber | — | pending |
+| W5 | baselines and metric honesty | — | pending |
+| W6 | solar-only advisory mode | — | pending |
+| W7 | low-dimensional PyMC reference (offline) | — | pending |
+
+Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
+
+## 12. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.

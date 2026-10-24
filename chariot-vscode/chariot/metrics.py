@@ -109,8 +109,14 @@ def baseline_scoreboard(
             **point_metrics(solar_truth, np.full(n, last_solar)),
         }
     )
-    if "clear_sky_w" in actual.columns:
-        clear = pd.to_numeric(actual["clear_sky_w"], errors="coerce").to_numpy(dtype=float)
+    # The materialised dataset carries the clear-sky reference as
+    # ``clear_sky_power_w``; the raw telemetry calls it ``clear_sky_w``.
+    clear_col = next(
+        (c for c in ("clear_sky_w", "clear_sky_power_w") if c in actual.columns),
+        None,
+    )
+    if clear_col is not None:
+        clear = pd.to_numeric(actual[clear_col], errors="coerce").to_numpy(dtype=float)
         rows.append(
             {
                 "target": "solar_w",

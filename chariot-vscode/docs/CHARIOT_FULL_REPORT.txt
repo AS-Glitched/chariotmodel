@@ -4,9 +4,9 @@ CHARIOT v3 + THE OFFLINE PyMC REFERENCE — COMPLETE ENGINEERING REPORT
 Every formula, every rule, every test, every result and the complete source code, in one file.
 repository   : https://github.com/AS-Glitched/chariotmodel
 branch       : arena/eb404247-chariotmodel
-commit       : ad806c059b79
+commit       : a744f61693f1
 pull request : #1 (open)
-generated    : 2026-10-24 17:24 UTC
+generated    : 2026-10-24 17:58 UTC
 generator    : scripts/build_full_report.py
 
 CONTENTS
@@ -2878,8 +2878,8 @@ SOURCE: chariot/training_extract.py
 ==============================================================================
 materialised dataset + clear-sky gate + 60/20/20 split
 file   : chariot-vscode/chariot/training_extract.py
-lines  : 335
-bytes  : 11768
+lines  : 355
+bytes  : 12737
 ------------------------------------------------------------------------------
 """Training Extract — materialized, versioned, model-ready dataset (PDF §4.6).
 
@@ -2994,6 +2994,7 @@ def build_training_extract(
     validate_frac: float = 0.20,
     test_frac: float = 0.20,
     created_by: str = "system",
+    honour_split: bool = False,
 ) -> dict[str, Any]:
     """Build the materialized training extract.
 
@@ -3064,12 +3065,31 @@ def build_training_extract(
     out["train_gate_codes"] = codes
     out["is_trainable"] = [len(c) == 0 for c in codes]
 
-    out["split"] = assign_splits(
-        out,
-        train_frac=train_frac,
-        validate_frac=validate_frac,
-        test_frac=test_frac,
-    )
+    if honour_split and "split" in frame.columns:
+        # The 2022 -> 2023 protocol assigns the split *upstream* (train and
+        # validate live in 2022, the report-only test lives in 2023), so the
+        # chronological re-split must be skipped.  The assignment is opt-in:
+        # with the default the behaviour is bit-identical to v3.
+        pre = frame["split"].astype(str).str.strip().str.lower()
+        if pre.isin(["train", "validate", "test"]).all():
+            out["split"] = pre.to_numpy()
+            split_policy = "pre_assigned (upstream protocol)"
+        else:  # pragma: no cover - defensive
+            out["split"] = assign_splits(
+                out,
+                train_frac=train_frac,
+                validate_frac=validate_frac,
+                test_frac=test_frac,
+            )
+            split_policy = "time_ordered_60_20_20"
+    else:
+        out["split"] = assign_splits(
+            out,
+            train_frac=train_frac,
+            validate_frac=validate_frac,
+            test_frac=test_frac,
+        )
+        split_policy = "time_ordered_60_20_20"
 
     out["calibration_version"] = calibration_version or "calibration_identity_v1"
     out["capacity_factor"] = float(calibration_factors.get("capacity_factor", 1.0))
@@ -3111,7 +3131,7 @@ def build_training_extract(
         "path": str(path),
         "time_start": str(out["timestamp_utc"].min()),
         "time_end": str(out["timestamp_utc"].max()),
-        "split_policy": "time_ordered_60_20_20",
+        "split_policy": split_policy,
         "split_fractions": {
             "train": train_frac,
             "validate": validate_frac,
@@ -8109,8 +8129,8 @@ SOURCE: chariot/metrics.py
 ==============================================================================
 evaluation metrics + baseline scoreboard
 file   : chariot-vscode/chariot/metrics.py
-lines  : 162
-bytes  : 5853
+lines  : 168
+bytes  : 6102
 ------------------------------------------------------------------------------
 """Evaluation metrics for CHARIOT advisories.
 
@@ -8223,8 +8243,14 @@ def baseline_scoreboard(
             **point_metrics(solar_truth, np.full(n, last_solar)),
         }
     )
-    if "clear_sky_w" in actual.columns:
-        clear = pd.to_numeric(actual["clear_sky_w"], errors="coerce").to_numpy(dtype=float)
+    # The materialised dataset carries the clear-sky reference as
+    # ``clear_sky_power_w``; the raw telemetry calls it ``clear_sky_w``.
+    clear_col = next(
+        (c for c in ("clear_sky_w", "clear_sky_power_w") if c in actual.columns),
+        None,
+    )
+    if clear_col is not None:
+        clear = pd.to_numeric(actual[clear_col], errors="coerce").to_numpy(dtype=float)
         rows.append(
             {
                 "target": "solar_w",
@@ -8281,8 +8307,8 @@ SOURCE: chariot/pipeline.py
 ==============================================================================
 the end-to-end v3 spine
 file   : chariot-vscode/chariot/pipeline.py
-lines  : 963
-bytes  : 36430
+lines  : 995
+bytes  : 37975
 ------------------------------------------------------------------------------
 """CHARIOT v3 end-to-end spine.
 
@@ -8438,6 +8464,15 @@ class PipelineConfig:
     horizon: str = "operational"
     train_frac: float = 0.60
     validate_frac: float = 0.20
+    #: Honour a split that was assigned upstream (the 2022 -> 2023 protocol:
+    #: train and validate in 2022, the report-only test in 2023).  Off by
+    #: default, so the v3 behaviour is unchanged.
+    honour_split: bool = False
+    #: Which split the rolling-origin evaluation windows are drawn from.
+    #: "test" (default) keeps the v3 behaviour; "validate" is used for the
+    #: 2022 selection metrics of the 2022 -> 2023 protocol.  The model is
+    #: always fitted on the train split only.
+    evaluate_split: str = "test"
     #: Calibrate the ensemble spread on the validation split.
     calibrate_spread: bool = True
     spread_windows: int = 6
@@ -8579,6 +8614,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
         validate_frac=config.validate_frac,
         test_frac=config.test_frac,
         created_by="pipeline",
+        honour_split=config.honour_split,
     )
     dataset = load_dataset(store, manifest["dataset_version"])
 
@@ -8586,6 +8622,15 @@ def run(config: PipelineConfig) -> dict[str, Any]:
     train = dataset.loc[(dataset["split"] == "train") & dataset["is_trainable"]].reset_index(drop=True)
     validate = dataset.loc[(dataset["split"] == "validate") & dataset["is_trainable"]].reset_index(drop=True)
     test = dataset.loc[(dataset["split"] == "test") & dataset["is_trainable"]].reset_index(drop=True)
+    # The evaluation frames are drawn from ``evaluate_split``; the default
+    # ("test") reproduces the v3 behaviour bit for bit.
+    eval_frame = (
+        test
+        if config.evaluate_split == "test"
+        else dataset.loc[
+            (dataset["split"] == config.evaluate_split) & dataset["is_trainable"]
+        ].reset_index(drop=True)
+    )
 
     model = fit_model(
         train,
@@ -8649,7 +8694,7 @@ def run(config: PipelineConfig) -> dict[str, Any]:
 
     # ------------------------------------------------------ rolling origins
     history = dataset.sort_values("timestamp_utc").reset_index(drop=True)
-    windows = _plan_windows(test, HORIZONS[config.horizon], config.max_windows)
+    windows = _plan_windows(eval_frame, HORIZONS[config.horizon], config.max_windows)
 
     results: list[dict[str, Any]] = []
     for idx, (origin_label, future, actual) in enumerate(windows):
@@ -8842,7 +8887,11 @@ def run(config: PipelineConfig) -> dict[str, Any]:
             "status_counts": summary["status_counts"],
             "policy_version": CONFIDENCE_POLICY.policy_version,
         },
-        "evaluation": summary["evaluation"],
+        "evaluation": {
+            "split": config.evaluate_split,
+            "n_windows": summary["evaluation"].get("solar_w", {}).get("n_windows"),
+            **summary["evaluation"],
+        },
         "windows": len(results),
         "store_path": str(config.store_path),
     }
@@ -9228,10 +9277,19 @@ def _summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     for r in results:
         for row in r.get("baselines", []):
             key = f"{row['model']}"
-            baselines.setdefault(key, []).append(row.get("mae"))
-    baseline_summary = {
-        k: {"mae_mean": float(np.nanmean(v))} for k, v in baselines.items() if v
-    }
+            baselines.setdefault(key, []).append(row)
+    baseline_summary: dict[str, Any] = {}
+    for key, rows in baselines.items():
+        if not rows:
+            continue
+        entry: dict[str, Any] = {
+            "mae_mean": float(np.nanmean([r.get("mae", np.nan) for r in rows]))
+        }
+        for field in ("rmse", "bias", "coverage", "energy_error_wh"):
+            values = [r.get(field) for r in rows if r.get(field) is not None]
+            if values and np.isfinite(np.asarray(values, dtype=float)).any():
+                entry[f"{field}_mean"] = float(np.nanmean(values))
+        baseline_summary[key] = entry
     return {
         "n_windows": len(results),
         "mean_survival_rate": float(np.mean(survival)),
@@ -10505,26 +10563,43 @@ SOURCE: scripts/prepare_dataset.py
 ==============================================================================
 materialise the Parquet slice + the 60/20/20 split
 file   : chariot-vscode/scripts/prepare_dataset.py
-lines  : 119
-bytes  : 4288
+lines  : 332
+bytes  : 13152
 ------------------------------------------------------------------------------
 #!/usr/bin/env python3
 """Prepare the DKASC Alice Springs telemetry for a CHARIOT run.
 
-The source file is the full-year 15-minute solar-only DKASC export (2022,
-35 040 rows).  By default the **whole year** is used: the training window
-then covers every solar elevation and every season, which matters because
-the clear-sky clearness profile is indexed by solar elevation and drifts
-seasonally.
+Two protocols are supported.
+
+``single`` (default, unchanged)
+    One window, split chronologically into 60/20/20 train/validate/test.
+    This is what the v3 reference run used.
+
+``year2022_2023``
+    The **2022 → 2023** evaluation protocol:
+
+    ==================  ====================================================
+    ``train_2022``      the first 60 % of the 2022 window (training only)
+    ``validate_2022``   the remaining 40 % of the 2022 window (selection only)
+    ``test_2023``       the whole 2023 window (report only, never fitted)
+    ==================  ====================================================
+
+    The 2022 window is *not* split 60/20/20: the 2023 year replaces the test
+    split, so no 2022 row is ever used as a test target and nothing is fitted
+    or selected on 2023.
 
 The prepared slice is written to ``var/data/`` (git-ignored) together with a
-manifest that records the content hash and the deterministic 60/20/20
-train/validate/test boundaries, so the split can be verified without shipping
-the bulk payload into git.
+manifest that records the content hash and the exact split boundaries, so the
+split can be verified without shipping the bulk payload into git.
 
-Usage:
+Usage::
+
     python scripts/prepare_dataset.py --source <dka_alice_springs_solar_only_15min_2022.csv>
-    python scripts/prepare_dataset.py --source <csv> --start 2022-09-01 --end 2022-12-01
+
+    python scripts/prepare_dataset.py --protocol year2022_2023 \
+        --source      <dka_alice_springs_solar_only_15min_2022.csv> \
+        --source-test <dka_alice_springs_solar_only_15min_2023.csv> \
+        --out runs/w1_data_2022_2023
 """
 
 from __future__ import annotations
@@ -10533,12 +10608,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from chariot.dataset_qc import qc_frame, render_qc_markdown, summarise  # noqa: E402
 from chariot.hashing import frame_content_hash  # noqa: E402
 from chariot.training_extract import assign_splits  # noqa: E402
 
@@ -10546,24 +10623,45 @@ DEFAULT_START = "2022-01-01"
 DEFAULT_END = "2023-01-01"
 DEFAULT_OUT = ROOT / "var" / "data" / "dka_alice_springs_2022_15min.parquet"
 
+#: The 2022 → 2023 protocol windows.
+PROTOCOL_YEAR_2022 = ("2022-01-01", "2023-01-01")
+PROTOCOL_YEAR_2023 = ("2023-01-01", "2024-01-01")
+PROTOCOL_DATA_DIR = ROOT / "var" / "data"
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", required=True, help="source CSV (full-year export)")
-    parser.add_argument("--start", default=DEFAULT_START)
-    parser.add_argument("--end", default=DEFAULT_END)
-    parser.add_argument("--out", default=str(DEFAULT_OUT))
-    parser.add_argument(
-        "--train-frac", type=float, default=0.60, help="train fraction (default 0.60)"
-    )
-    parser.add_argument(
-        "--validate-frac", type=float, default=0.20, help="validate fraction (default 0.20)"
-    )
-    parser.add_argument(
-        "--test-frac", type=float, default=0.20, help="test fraction (default 0.20)"
-    )
-    args = parser.parse_args()
 
+def _read_source(path: Path, start: str, end: str) -> pd.DataFrame:
+    """Read a CSV export and slice it to [start, end)."""
+    frame = pd.read_csv(path)
+    frame["timestamp_utc"] = pd.to_datetime(frame["timestamp_utc"], utc=True)
+    mask = (frame["timestamp_utc"] >= pd.Timestamp(start, tz="UTC")) & (
+        frame["timestamp_utc"] < pd.Timestamp(end, tz="UTC")
+    )
+    sliced = frame.loc[mask].sort_values("timestamp_utc").reset_index(drop=True)
+    if sliced.empty:
+        raise SystemExit(f"no rows in {start}..{end} for {path}")
+    if "is_gap" in sliced.columns:
+        sliced["is_gap"] = sliced["is_gap"].astype(str).str.lower().isin(["1", "true", "yes"])
+    else:
+        sliced["is_gap"] = False
+    return sliced
+
+
+def _boundaries(frame: pd.DataFrame, labels: pd.Series) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for name in ("train", "validate", "test"):
+        sel = frame.loc[labels == name, "timestamp_utc"]
+        if len(sel) == 0:
+            continue
+        out[name] = {
+            "min": str(sel.min()),
+            "max": str(sel.max()),
+            "count": int(len(sel)),
+        }
+    return out
+
+
+def prepare_single(args: argparse.Namespace) -> int:
+    """The original single-window 60/20/20 protocol."""
     source = Path(args.source)
     if not source.exists():
         print(f"source not found: {source}", file=sys.stderr)
@@ -10595,9 +10693,7 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     sliced.to_parquet(out, index=False)
 
-    boundaries = (
-        sliced.groupby("split")["timestamp_utc"].agg(["min", "max", "count"]).to_dict("index")
-    )
+    boundaries = _boundaries(sliced, sliced["split"])
     manifest = {
         "source": str(source),
         "source_rows": int(len(frame)),
@@ -10612,7 +10708,7 @@ def main() -> int:
             "validate": args.validate_frac,
             "test": args.test_frac,
         },
-        "split_boundaries": {k: {kk: str(vv) for kk, vv in v.items()} for k, v in boundaries.items()},
+        "split_boundaries": boundaries,
         "content_hash": frame_content_hash(sliced),
         "output": str(out),
         "columns": list(sliced.columns),
@@ -10622,6 +10718,181 @@ def main() -> int:
 
     print(json.dumps(manifest, indent=2))
     return 0
+
+
+def prepare_year2022_2023(args: argparse.Namespace) -> int:
+    """Build train_2022 / validate_2022 / test_2023 and the QC report."""
+    src_2022 = Path(args.source)
+    src_2023 = Path(args.source_test)
+    for p in (src_2022, src_2023):
+        if not p.exists():
+            print(f"source not found: {p}", file=sys.stderr)
+            return 2
+
+    data_dir = Path(args.data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = Path(args.out)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # -- the 2022 training window (train + validation only) ---------------
+    f22 = _read_source(src_2022, *PROTOCOL_YEAR_2022)
+    labels = assign_splits(
+        f22,
+        train_frac=args.train_frac,
+        validate_frac=1.0 - args.train_frac,
+        test_frac=0.0,
+    )
+    f22["split"] = labels
+    f22["split_year"] = 2022
+    train_2022 = f22.loc[labels == "train"].reset_index(drop=True)
+    validate_2022 = f22.loc[labels == "validate"].reset_index(drop=True)
+
+    # -- the 2023 report-only window --------------------------------------
+    f23 = _read_source(src_2023, *PROTOCOL_YEAR_2023)
+    f23["split"] = "test"
+    f23["split_year"] = 2023
+    test_2023 = f23.reset_index(drop=True)
+
+    slices = {
+        "train_2022": train_2022,
+        "validate_2022": validate_2022,
+        "test_2023": test_2023,
+    }
+    paths: dict[str, str] = {}
+    hashes: dict[str, str] = {}
+    for name, frame in slices.items():
+        path = data_dir / f"dka_alice_springs_{name}.parquet"
+        frame.to_parquet(path, index=False)
+        paths[name] = str(path)
+        hashes[name] = frame_content_hash(frame)
+
+    # -- the combined slice the spine consumes ----------------------------
+    combined = (
+        pd.concat([train_2022, validate_2022, test_2023], ignore_index=True)
+        .sort_values("timestamp_utc")
+        .reset_index(drop=True)
+    )
+    combined_path = data_dir / "dka_alice_springs_2022_2023.parquet"
+    combined.to_parquet(combined_path, index=False)
+    combined_hash = frame_content_hash(combined)
+
+    manifest = {
+        "protocol": "year2022_2023",
+        "protocol_version": "chariot_protocol_2022_2023_v1.0",
+        "description": (
+            "TRAIN = the first 60 % of the 2022 window; VALIDATE = the remaining "
+            "40 % of the 2022 window; TEST = the whole 2023 window (report only, "
+            "never fitted, never selected on).  The 2022 test tail of the legacy "
+            "60/20/20 protocol is discarded on purpose."
+        ),
+        "sources": {
+            "train_validate_2022": str(src_2022),
+            "test_2023": str(src_2023),
+        },
+        "windows": {
+            "train_validate_2022": list(PROTOCOL_YEAR_2022),
+            "test_2023": list(PROTOCOL_YEAR_2023),
+        },
+        "split_fractions": {
+            "train_2022": args.train_frac,
+            "validate_2022": 1.0 - args.train_frac,
+        },
+        "split_boundaries": {
+            "train_2022": _boundaries(train_2022, train_2022["split"]),
+            "validate_2022": _boundaries(validate_2022, validate_2022["split"]),
+            "test_2023": _boundaries(test_2023, test_2023["split"]),
+        },
+        "content_hashes": {
+            **{name: hashes[name] for name in slices},
+            "combined": combined_hash,
+        },
+        "rows": {name: int(len(frame)) for name, frame in slices.items()},
+        "rows_combined": int(len(combined)),
+        "outputs": {**paths, "combined": str(combined_path)},
+        "cadence_min": 15,
+        "columns": list(combined.columns),
+        "selection_split": "validate_2022",
+        "test_split_usage": "report only",
+    }
+    manifest_path = data_dir / "dka_alice_springs_2022_2023.manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    # -- QC ----------------------------------------------------------------
+    qc_slices = {
+        "train_2022": qc_frame(train_2022, rated_pv_w=args.rated_pv_w, label="train_2022"),
+        "validate_2022": qc_frame(validate_2022, rated_pv_w=args.rated_pv_w, label="validate_2022"),
+        "test_2023": qc_frame(test_2023, rated_pv_w=args.rated_pv_w, label="test_2023"),
+    }
+    qc = {
+        "stage": "W1",
+        "protocol": "year2022_2023",
+        "slices": qc_slices,
+        "content_hashes": manifest["content_hashes"],
+        "split_boundaries": manifest["split_boundaries"],
+        "notes": [
+            "The two years use **different clear-sky models**: the 2022 export was "
+            "built with a 15 degree tilt, the 2023 export with a 17.5 degree tilt "
+            "(both single-plane equivalents inferred from the measured POA).  That "
+            "is a change of the *reference*, not of the site, and it is the first "
+            "suspect for the year-to-year shift in the clearness ratio.",
+            "The clearness ratio above 1.0 (the 'clear-sky under-binding') is the "
+            "known defect this stage quantifies; W2 (the clear-sky upgrade) is "
+            "gated on the 2022 validation slice and the 2023 slice is reported once.",
+            "The load, battery and SOC channels are **declared** site-card "
+            "assumptions; nothing in this stage measures them.",
+        ],
+    }
+    (run_dir / "qc.json").write_text(json.dumps(qc, indent=2, default=str), encoding="utf-8")
+    (run_dir / "summary.md").write_text(
+        render_qc_markdown(
+            qc,
+            title="W1 — data + the 2022→2023 protocol (QC)",
+            extra=(
+                "Protocol: **2022 train → 2022 validate → 2023 test**.\n\n"
+                f"Rows: train_2022 {manifest['rows']['train_2022']}, "
+                f"validate_2022 {manifest['rows']['validate_2022']}, "
+                f"test_2023 {manifest['rows']['test_2023']}.\n\n"
+                "Content hashes: "
+                + ", ".join(f"`{k}` {v[:16]}…" for k, v in manifest["content_hashes"].items())
+            ),
+        ),
+        encoding="utf-8",
+    )
+
+    print(json.dumps({"manifest": str(manifest_path), "qc": summarise(qc)}, indent=2))
+    print(f"wrote {run_dir / 'summary.md'} and {run_dir / 'qc.json'}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--protocol", default="single", choices=["single", "year2022_2023"])
+    parser.add_argument("--source", required=True, help="source CSV (2022 export)")
+    parser.add_argument("--source-test", help="source CSV (2023 export, year2022_2023 only)")
+    parser.add_argument("--start", default=DEFAULT_START)
+    parser.add_argument("--end", default=DEFAULT_END)
+    parser.add_argument("--out", default=str(DEFAULT_OUT))
+    parser.add_argument("--data-dir", default=str(PROTOCOL_DATA_DIR))
+    parser.add_argument("--rated-pv-w", type=float, default=220_000.0)
+    parser.add_argument(
+        "--train-frac", type=float, default=0.60, help="train fraction (default 0.60)"
+    )
+    parser.add_argument(
+        "--validate-frac", type=float, default=0.20, help="validate fraction (single protocol)"
+    )
+    parser.add_argument(
+        "--test-frac", type=float, default=0.20, help="test fraction (single protocol)"
+    )
+    args = parser.parse_args()
+
+    if args.protocol == "year2022_2023":
+        if not args.source_test:
+            print("--source-test is required for the year2022_2023 protocol", file=sys.stderr)
+            return 2
+        return prepare_year2022_2023(args)
+    return prepare_single(args)
 
 
 if __name__ == "__main__":
@@ -10634,8 +10905,8 @@ SOURCE: scripts/run_chariot3.py
 ==============================================================================
 run the full operational spine
 file   : chariot-vscode/scripts/run_chariot3.py
-lines  : 84
-bytes  : 2936
+lines  : 105
+bytes  : 3835
 ------------------------------------------------------------------------------
 #!/usr/bin/env python3
 """Run the CHARIOT v3 end-to-end spine.
@@ -10699,10 +10970,29 @@ def main() -> int:
         help="skip validation-fitted ensemble spread calibration",
     )
     parser.add_argument("--keep-parquet", action="store_true", help="keep the materialised dataset")
+    parser.add_argument(
+        "--evaluate-split",
+        default="test",
+        choices=["test", "validate", "train"],
+        help="split the rolling-origin evaluation windows are drawn from",
+    )
+    parser.add_argument("--start", default=None, help="analysis window start (ISO)")
+    parser.add_argument("--end", default=None, help="analysis window end (ISO, exclusive)")
+    parser.add_argument(
+        "--honour-split",
+        action="store_true",
+        help=(
+            "honour the split assigned in the prepared slice instead of "
+            "re-splitting it chronologically (the 2022 -> 2023 protocol: "
+            "train/validate in 2022, report-only test in 2023)"
+        ),
+    )
     args = parser.parse_args()
 
     config = PipelineConfig(
         source_csv=args.source,
+        **({"start": args.start} if args.start else {}),
+        **({"end": args.end} if args.end else {}),
         out_dir=args.out,
         store_path=args.store,
         n_scenarios=args.scenarios,
@@ -10712,6 +11002,8 @@ def main() -> int:
         use_residual=not args.no_residual,
         calibrate_spread=not args.no_spread_calibration,
         keep_parquet=args.keep_parquet,
+        honour_split=args.honour_split,
+        evaluate_split=args.evaluate_split,
     )
     manifest = run(config)
     print(json.dumps(manifest, indent=2, default=str))
@@ -13160,8 +13452,8 @@ FILE: README.md
 ==============================================================================
 the README
 file   : chariot-vscode/README.md
-lines  : 260
-bytes  : 13737
+lines  : 339
+bytes  : 17718
 ------------------------------------------------------------------------------
 # CHARIOT v3
 
@@ -13408,7 +13700,67 @@ Rules the script obeys:
   DSM/CERC readiness claim. It models the *clearness* channel only, on a
   solar-only site whose load and battery are declared engineering assumptions.
 
-## 9. What this repository is not
+## 9. The 2022 → 2023 evaluation protocol (W1)
+
+The operational question CHARIOT has to answer is *does the model still work on a
+year it has never seen?* The original v3 evaluation answered it with a
+chronological 60/20/20 split **inside 2022**, so the "test" year was only ten
+weeks long and the training window started in December 2021 (a summer month in
+the southern hemisphere — a seasonal artefact in the fit).
+
+The `year2022_2023` protocol replaces it:
+
+| split | window | use |
+| --- | --- | --- |
+| `train_2022` | 2022-01-01 → 2022-08-07 (first 60 % of 2022) | fitting only |
+| `validate_2022` | 2022-08-07 → 2022-12-31 (remaining 40 % of 2022) | selection only |
+| `test_2023` | 2023-01-01 → 2023-12-31 (whole year) | **report only** — never fitted, never selected on |
+
+```bash
+# 1. build the slices, the manifest (content hashes + exact boundaries) and the QC
+python scripts/prepare_dataset.py --protocol year2022_2023 \
+    --source  <dka_alice_springs_solar_only_15min_2022.csv> \
+    --source-test <dka_alice_springs_solar_only_15min_2023.csv>
+
+# 2. run the ops spine on the protocol (the model is fitted on 2022 train only)
+python scripts/run_chariot3.py \
+    --source var/data/dka_alice_springs_2022_2023.parquet \
+    --start 2022-01-01 --end 2024-01-01 \
+    --honour-split --out runs/w1_ops_v3_protocol_2022_2023
+
+# 3. the 2022 selection metrics (the gate every later stage is judged on)
+python scripts/run_chariot3.py --source var/data/dka_alice_springs_2022_2023.parquet \
+    --start 2022-01-01 --end 2024-01-01 --honour-split --evaluate-split validate \
+    --out runs/w1_ops_v3_val_2022
+
+# 4. the stage report
+python scripts/build_w1_report.py
+```
+
+`--honour-split` tells the training extract to keep the split that was assigned
+upstream instead of re-splitting chronologically; `--evaluate-split` chooses
+which split the rolling-origin windows are drawn from. Both default to the v3
+behaviour, so the existing spine and its tests are untouched.
+
+**Measured QC (both years).** Strict 15-minute cadence, 0 duplicate timestamps,
+night solar exactly 0 W, clear-sky ≠ measurement in every slice. Daylight
+clearness above 1.05×: **27.68 %** (train_2022), **22.45 %** (validate_2022),
+**18.85 %** (test_2023); above 1.20×: 5.20 %, 4.97 %, 1.29 %. The 2022 and 2023
+exports do **not** share a clear-sky geometry (15° vs 17.5° tilt), so the
+year-over-year clearness shift is a *reference* artefact — W2's entry point.
+
+**Ops baseline on the protocol** (v3 spine unchanged, 40 rolling windows,
+200 scenarios/window):
+
+| window | MAE (W) | RMSE (W) | bias (W) | coverage | survival |
+| --- | --- | --- | --- | --- | --- |
+| 2022 validate (selection) | 21,143 | 28,568 | +4,403 | 0.806 | 0.944 |
+| 2023 test (report only) | 17,163 | 23,223 | +3,218 | 0.888 | 0.906 |
+
+Baselines on the same windows: clear-sky naive 22,757 W (2022 validate) and
+20,304 W (2023 test); persistence-at-origin 69,054 W and 68,234 W.
+
+## 10. What this repository is not
 
 - Not a controller. No setpoints, no dispatch, no closed loop.
 - Not a financial guarantee. Investor/Government mode is a probabilistic planning view.
@@ -13418,7 +13770,26 @@ Rules the script obeys:
   `baselines.py`, `synthetic.py`) and their run artefacts were superseded by v3 and
   removed; the history remains in git.
 
-## 10. License / attribution
+## 11. Changelog (improvement programme W1 → W7)
+
+The operational default is the **versioned NumPy clearness SSM**
+(`chariot/model.py`). Every model change bumps the model version, and a stage
+is only promoted if it passes its gate on the **2022 validation** window. The
+2023 window is report-only.
+
+| stage | what landed | model version | gate |
+| --- | --- | --- | --- |
+| W1 | `year2022_2023` protocol (train 2022 / validate 2022 / test 2023), `chariot/dataset_qc.py`, `--honour-split` + `--evaluate-split` in the ops CLI | unchanged (`hcbsswm_v3.0_empirical_bayes_*`) | PASS — QC clean, boundaries exact, no model change |
+| W2 | clear-sky upgrade | — | pending |
+| W3 | ops bias / hour-elevation calibration | — | pending |
+| W4 | constrained residual chamber | — | pending |
+| W5 | baselines and metric honesty | — | pending |
+| W6 | solar-only advisory mode | — | pending |
+| W7 | low-dimensional PyMC reference (offline) | — | pending |
+
+Stage reports live in `runs/<stage_id>/{summary.md,comparison.json}`.
+
+## 12. License / attribution
 
 DKASC Alice Springs data © Desert Knowledge Australia / DKEG, used under the
 DKASC data licence. See the upstream dataset for terms.
@@ -23463,7 +23834,8 @@ bytes  : 177753
 PART 10 — THE COMMIT HISTORY
 ==============================================================================
 How the repository got here.
-ad806c0 (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) docs: sharpen the diagnosis of the reference posterior's non-convergence
+a744f61 (HEAD -> arena/eb404247-chariotmodel, origin/arena/eb404247-chariotmodel) docs: publish the complete CHARIOT report as a single text file
+ad806c0 docs: sharpen the diagnosis of the reference posterior's non-convergence
 79fa481 feat(reference): make the offline PyMC clearness reference identifiable and publish the ops-vs-PyMC comparison
 782de77 feat: add an offline PyMC reference path for the solar clearness channel
 9e83a9a docs: correct the API operation count and document the full HTTP surface
@@ -23473,10 +23845,12 @@ c880b91 (grafted, origin/main, origin/HEAD, main) first
 
 ------------------------------------------------------------------------------
 The most recent commit in detail:
-ad806c0 docs: sharpen the diagnosis of the reference posterior's non-convergence
- chariot-vscode/docs/REPORT.md | 57 +++++++++++++++++++++++++++++--------------
- 1 file changed, 39 insertions(+), 18 deletions(-)
+a744f61 docs: publish the complete CHARIOT report as a single text file
+ chariot-vscode/README.md                    |     4 +
+ chariot-vscode/docs/CHARIOT_FULL_REPORT.txt | 23482 ++++++++++++++++++++++++++
+ chariot-vscode/scripts/build_full_report.py |   228 +
+ 3 files changed, 23714 insertions(+)
 ==============================================================================
 END OF REPORT
 ==============================================================================
-commit ad806c059b79 — arena/eb404247-chariotmodel — 2026-10-24 17:24 UTC
+commit a744f61693f1 — arena/eb404247-chariotmodel — 2026-10-24 17:58 UTC
