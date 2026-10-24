@@ -118,6 +118,10 @@ chariot-vscode/
   tests/              conftest.py · test_spine.py (16) · test_api.py (6)
                       test_pymc_reference.py (11, PyMC optional marker)
   docs/ARCHITECTURE.md
+  docs/REPORT.md          the engineering report (formulas, tests, results)
+  docs/CHARIOT_FULL_REPORT.txt   everything in ONE file: the report + the full
+                          source of every module/script/test + the run artefacts
+                          (regenerate: python scripts/build_full_report.py)
   runs/               small JSON manifests/metrics from real runs
   var/                runtime: store, capsules, slices, parquet (git-ignored)
 ```
