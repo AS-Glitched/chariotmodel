@@ -128,8 +128,18 @@ def generate_batch(
     state: dict[str, float] | None = None,
     mode: str = "hybrid_hierarchical",
     dt_h: float = 0.25,
+    paths: dict[str, np.ndarray] | None = None,
 ) -> ScenarioBatch:
-    """Generate a scenario batch and solve the physics for every path."""
+    """Generate a scenario batch and solve the physics for every path.
+
+    ``paths`` is the **adapter seam** for the offline PyMC reference: when it
+    is supplied, the deterministic simulation is skipped and the supplied
+    ``solar_w`` / ``load_w`` ensembles are used verbatim.  Everything
+    downstream — the physics solver, the content hash, the lineage and the
+    Tribunal — is identical, so a reference scenario is certified by exactly
+    the same gate as an operational one.  ``None`` (the default) keeps the
+    operational behaviour byte-for-byte.
+    """
     if mode not in GENESIS_MODES:
         raise ValueError(f"unknown genesis mode {mode!r}; known: {GENESIS_MODES}")
 
@@ -138,17 +148,21 @@ def generate_batch(
     meta = getattr(ctx, "metadata", {}) or {}
     declared_load_sigma = float(meta.get("load_relative_sigma", 0.0) or 0.0)
 
-    sim = simulate(
-        model,
-        site_id,
-        frame,
-        n_scenarios=n_scenarios,
-        seed=seed,
-        state=state,
-        load_profile=None,
-        declared_load_sigma=declared_load_sigma,
-        dt_h=dt_h,
-    )
+    if paths is None:
+        sim = simulate(
+            model,
+            site_id,
+            frame,
+            n_scenarios=n_scenarios,
+            seed=seed,
+            state=state,
+            load_profile=None,
+            declared_load_sigma=declared_load_sigma,
+            dt_h=dt_h,
+        )
+    else:
+        sim = dict(paths)
+        sim.setdefault("dt_h", np.array([dt_h]))
     solar = sim["solar_w"]
     load = sim["load_w"]
 

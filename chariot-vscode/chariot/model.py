@@ -908,6 +908,43 @@ def _load_reference_profile(ctx: Any, timestamps: pd.Series) -> np.ndarray:
     return np.zeros(len(timestamps))
 
 
+def load_reference_profile(ctx: Any, timestamps: pd.Series) -> np.ndarray:
+    """Public alias of :func:`_load_reference_profile`.
+
+    The offline PyMC reference path reuses the *declared* load profile so
+    that both models are compared on the same load assumption.  The DKASC
+    export has no load meter, so this is an engineering declaration and not
+    something either model learns.
+    """
+    return _load_reference_profile(ctx, timestamps)
+
+
+def build_load_ensemble(
+    load_profile: np.ndarray,
+    *,
+    n_scenarios: int,
+    t_steps: int,
+    declared_load_sigma: float,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Build the declared load ensemble (W) and the per-scenario site bias.
+
+    Load channel: declared profile x scenario bias x AR(1) deviation.  The
+    construction is shared with the offline PyMC reference so that the
+    Tribunal comparison is about the solar channel, not about two different
+    load assumptions.
+    """
+    profile = np.nan_to_num(np.asarray(load_profile, dtype=float), nan=0.0)
+    load_sigma = float(declared_load_sigma)
+    site_bias = np.clip(rng.lognormal(0.0, load_sigma, size=n_scenarios), 0.2, 5.0)
+    load_dev = np.zeros((n_scenarios, t_steps), dtype=float)
+    load_phi = 0.6
+    for k in range(1, t_steps):
+        load_dev[:, k] = load_phi * load_dev[:, k - 1] + rng.normal(0.0, 0.05, size=n_scenarios)
+    load = np.maximum(profile[None, :] * site_bias[:, None] * (1.0 + load_dev), 0.0)
+    return load, site_bias
+
+
 def _seasonal_validation_mae(
     ch: ChannelFit,
     latitude: float,
@@ -1226,13 +1263,13 @@ def simulate(
     solar = np.maximum(solar + noise, 0.0)
 
     # Load channel: declared profile x scenario bias x AR(1) deviation.
-    load_sigma = float(declared_load_sigma)
-    site_bias = np.clip(rng.lognormal(0.0, load_sigma, size=n_scenarios), 0.2, 5.0)
-    load_dev = np.zeros((n_scenarios, t_steps), dtype=float)
-    load_phi = 0.6
-    for k in range(1, t_steps):
-        load_dev[:, k] = load_phi * load_dev[:, k - 1] + rng.normal(0.0, 0.05, size=n_scenarios)
-    load = np.maximum(load_profile[None, :] * site_bias[:, None] * (1.0 + load_dev), 0.0)
+    load, site_bias = build_load_ensemble(
+        load_profile,
+        n_scenarios=n_scenarios,
+        t_steps=t_steps,
+        declared_load_sigma=declared_load_sigma,
+        rng=rng,
+    )
 
     if residual is not None and residual_weight > 0.0:
         w = float(residual_weight)

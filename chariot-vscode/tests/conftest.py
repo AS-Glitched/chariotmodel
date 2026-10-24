@@ -22,6 +22,13 @@ if str(ROOT) not in sys.path:
 
 from chariot.model import solar_elevation_deg  # noqa: E402
 
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the markers used by the optional reference tests."""
+    config.addinivalue_line(
+        "markers", "pymc: requires the optional PyMC reference dependency"
+    )
+
 SITE_ID = "dka_alice_springs"
 TENANT_ID = "dkasc"
 RATED_PV_W = 220_000.0
